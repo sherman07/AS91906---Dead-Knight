@@ -1,17 +1,12 @@
 import arcade
 import os
 
-# Game constants
-SCREEN_WIDTH = 800
-SCREEN_HEIGHT = 600
+# The constants for Dead Knight Top down game
+SCREEN_WIDTH = 1440
+SCREEN_HEIGHT = 720
 SCREEN_TITLE = "Dead Knight"
 PLAYER_SPEED = 3
-TILE_SCALING = 1.8
-
-class Player(arcade.Sprite):
-    def update(self):
-        self.center_x += self.change_x
-        self.center_y += self.change_y
+TILE_SCALING = 1
 
 class Game(arcade.Window):
     def __init__(self):
@@ -41,12 +36,6 @@ class Game(arcade.Window):
         
         self.scene = arcade.Scene.from_tilemap(tilemap)
         
-        # Create player
-        self.player = Player(":resources:images/animated_characters/female_adventurer/femaleAdventurer_idle.png", 0.5)
-        self.player.center_x = 1300
-        self.player.center_y = 1300
-        self.scene.add_sprite("Player", self.player)
-        
         # Set up physics
         self.physics_engine = arcade.PhysicsEngineSimple(self.player, self.scene["Walls"])
         
@@ -64,35 +53,6 @@ class Game(arcade.Window):
         self.camera.use()
         self.scene.draw()
     
-    def on_update(self, delta_time):
-        # Movement
-        self.player.change_x = 0
-        self.player.change_y = 0
-        
-        if self.up: self.player.change_y = PLAYER_SPEED
-        if self.down: self.player.change_y = -PLAYER_SPEED
-        if self.left: self.player.change_x = -PLAYER_SPEED
-        if self.right: self.player.change_x = PLAYER_SPEED
-        
-        self.physics_engine.update()
-        
-        # Center camera
-        self.camera.position = (
-            self.player.center_x - SCREEN_WIDTH/2,
-            self.player.center_y - SCREEN_HEIGHT/2
-        )
-    
-    def on_key_press(self, key, modifiers):
-        if key in (arcade.key.UP, arcade.key.W): self.up = True
-        if key in (arcade.key.DOWN, arcade.key.S): self.down = True
-        if key in (arcade.key.LEFT, arcade.key.A): self.left = True
-        if key in (arcade.key.RIGHT, arcade.key.D): self.right = True
-    
-    def on_key_release(self, key, modifiers):
-        if key in (arcade.key.UP, arcade.key.W): self.up = False
-        if key in (arcade.key.DOWN, arcade.key.S): self.down = False
-        if key in (arcade.key.LEFT, arcade.key.A): self.left = False
-        if key in (arcade.key.RIGHT, arcade.key.D): self.right = False
 
 if __name__ == "__main__":
     window = Game()
