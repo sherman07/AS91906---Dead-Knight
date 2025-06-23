@@ -4,6 +4,10 @@
     ],
     "file.lastUsedOpenFilter": "All Files (*)",
     "fileStates": {
+        "": {
+            "scaleInDock": 1,
+            "scaleInEditor": 1
+        },
         "/Users/zhenghui/Desktop/AS91906_Dead-Knight/Dead Knight/Dungeon Tileset.tsx": {
             "scaleInDock": 1
         },
@@ -43,7 +47,7 @@
         },
         "Dungeon Tileset.tsx": {
             "dynamicWrapping": false,
-            "scaleInDock": 2,
+            "scaleInDock": 1,
             "scaleInEditor": 4
         },
         "Dungeon Tilset.tsx": {
@@ -53,7 +57,7 @@
         },
         "Dungeon.tsx": {
             "dynamicWrapping": false,
-            "scaleInDock": 1.5,
+            "scaleInDock": 1,
             "scaleInEditor": 1
         },
         "Dungeon_Tileset 2.tsx": {
@@ -66,7 +70,7 @@
         },
         "Extre Items.tsx": {
             "dynamicWrapping": false,
-            "scaleInDock": 3,
+            "scaleInDock": 1,
             "scaleInEditor": 3
         },
         "Flags.tsx": {
@@ -75,12 +79,20 @@
             "scaleInEditor": 3
         },
         "Level_01.tmx": {
-            "scale": 0.5,
-            "selectedLayer": 3,
+            "scale": 1.5,
+            "selectedLayer": 4,
             "viewCenter": {
-                "x": 1284,
-                "y": 1245
+                "x": 294.99999999999994,
+                "y": 1251.3333333333333
             }
+        },
+        "Level_01.tmx#Candlestick_01": {
+            "scaleInDock": 1
+        },
+        "Level_01.tmx#Candlestick_02": {
+            "dynamicWrapping": true,
+            "scaleInDock": 1,
+            "scaleInEditor": 1
         },
         "Maps/Candlestick_01.tsx": {
             "scaleInDock": 1
@@ -135,7 +147,7 @@
         },
         "Torch.tsx": {
             "dynamicWrapping": true,
-            "scaleInDock": 5.5,
+            "scaleInDock": 1,
             "scaleInEditor": 4
         },
         "Torches.tsx": {
