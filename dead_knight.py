@@ -96,7 +96,7 @@ class Game(arcade.Window):
         self.scene = arcade.Scene.from_tilemap(tilemap)
 
         self.player = PlayerCharacter()
-        self.player.center_x = 400
+        self.player.center_x = 1000
         self.player.center_y = 300
         self.scene.add_sprite("Player", self.player)
 
