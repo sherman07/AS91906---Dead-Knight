@@ -79,11 +79,11 @@
             "scaleInEditor": 3
         },
         "Level_01.tmx": {
-            "scale": 1.5,
-            "selectedLayer": 4,
+            "scale": 1.948,
+            "selectedLayer": 3,
             "viewCenter": {
-                "x": 294.99999999999994,
-                "y": 1251.3333333333333
+                "x": 1091.1190965092405,
+                "y": 1066.4784394250514
             }
         },
         "Level_01.tmx#Candlestick_01": {
@@ -155,36 +155,37 @@
             "scaleInDock": 1,
             "scaleInEditor": 1
         },
+        "peaks.tsx": {
+            "dynamicWrapping": true,
+            "scaleInDock": 1,
+            "scaleInEditor": 1
+        },
         "test.tsx": {
             "scaleInDock": 1,
             "scaleInEditor": 5.5
         }
     },
-    "frame.defaultDuration": 100,
-    "last.imagePath": "/Users/zhenghui/Desktop/Dead Knight/Extra Items",
+    "frame.defaultDuration": 20,
+    "last.imagePath": "/Users/zhenghui/Desktop/Dead-Knight/2D Pixel Dungeon Asset Pack/animations/peaks_32*32",
     "openFiles": [
         "Level_01.tmx",
-        "Candlestick_01.tsx",
-        "Candlestick_02.tsx",
-        "Flags.tsx",
-        "Extre Items.tsx",
-        "Collection Items.tsx"
+        "peaks.tsx"
     ],
-    "project": "",
+    "project": "Dead Knight.tiled-project",
     "recentFiles": [
-        "Maps/Level_01.tmx",
+        "peaks.tsx",
         "Level_01.tmx",
+        "Dungeon Tileset.tsx",
+        "Candlestick_02.tsx",
+        "Maps/Level_01.tmx",
         "Collection Items.tsx",
         "Extre Items.tsx",
         "Flags.tsx",
-        "Candlestick_02.tsx",
         "Candlestick_01.tsx",
         "Dungeon.tsx",
         "test.tsx",
-        "Extra Items.tsx",
-        "Dungeon Tileset.tsx",
-        "Torch.tsx"
+        "Extra Items.tsx"
     ],
     "tileset.lastUsedFormat": "tsx",
-    "tileset.type": 0
+    "tileset.type": 1
 }
