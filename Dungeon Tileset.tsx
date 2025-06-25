@@ -8,22 +8,22 @@
  </tile>
  <tile id="1">
   <objectgroup draworder="index" id="2">
-   <object id="1" x="0.248942" y="0.497884" width="31.3667" height="31.3667"/>
+   <object id="1" x="0.248942" y="0.497884" width="31.3667" height="15.8268"/>
   </objectgroup>
  </tile>
  <tile id="2">
   <objectgroup draworder="index" id="2">
-   <object id="1" x="0.248942" y="0.497884" width="31.6156" height="31.3667"/>
+   <object id="1" x="0.248942" y="0.497884" width="31.6156" height="15.0433"/>
   </objectgroup>
  </tile>
  <tile id="3">
   <objectgroup draworder="index" id="2">
-   <object id="1" x="0.248942" y="0.497884" width="31.6156" height="31.3667"/>
+   <object id="1" x="0.248942" y="0.497884" width="31.6156" height="14.5209"/>
   </objectgroup>
  </tile>
  <tile id="4">
   <objectgroup draworder="index" id="3">
-   <object id="20" x="0.248942" y="0" width="31.6156" height="31.8646"/>
+   <object id="20" x="0.248942" y="0" width="31.6156" height="15.0188"/>
   </objectgroup>
  </tile>
  <tile id="5">
