@@ -51,10 +51,9 @@ class PlayerCharacter(arcade.Sprite):
             texture_path_walk = f"{character_path}_walk{i}.png"
             texture = arcade.load_texture(texture_path_walk)
             self.walk_textures[DIRECTION_RIGHT].append(texture)
-            self.walk_textures[DIRECTION_LEFT].append(texture, mirror = True)
+            self.walk_textures[DIRECTION_LEFT].append(texture)
             self.walk_textures[DIRECTION_UP].append(texture)
             self.walk_textures[DIRECTION_DOWN].append(texture)
-
 
         super().__init__(self.idle_textures[DIRECTION_DOWN][0], scale=CHARACTER_SCALING)
 
