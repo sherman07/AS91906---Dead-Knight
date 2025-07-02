@@ -63,28 +63,37 @@ class PlayerCharacter(arcade.Sprite):
         # Load attack textures (only left/right)
         self.attack_textures = {
             DIRECTION_RIGHT: [],
-            DIRECTION_LEFT: []
+            DIRECTION_LEFT: [],
+            DIRECTION_UP: [],
+            DIRECTION_DOWN: []
         }
-        for i in range(5):
+        for i in range(7):
             self.attack_textures[DIRECTION_RIGHT].append(
-                arcade.load_texture(f"{character_path}_attack{i}.png"))
+                arcade.load_texture(f"{character_path}_right_attack{i}.png"))
             self.attack_textures[DIRECTION_LEFT].append(
-                arcade.load_texture(f"{character_path}_attack{i}.png"))
+                arcade.load_texture(f"{character_path}_left_attack{i}.png"))
+            self.attack_textures[DIRECTION_UP].append(
+                arcade.load_texture(f"{character_path}_up_attack{i}.png"))
+            self.attack_textures[DIRECTION_DOWN].append(
+                arcade.load_texture(f"{character_path}_down_attack{i}.png"))
 
         super().__init__(self.idle_textures[DIRECTION_RIGHT][0], scale=CHARACTER_SCALING)
 
-    def update_animation(self, delta_time: float = 1 / 60):
+    def character_animation(self, delta_time: float = 1 / 60):
         # Update direction based on movement
         if self.change_y > 0:
             self.direction = DIRECTION_UP
+            self.facing_direction = DIRECTION_UP
         elif self.change_y < 0:
             self.direction = DIRECTION_DOWN
+            self.facing_direction = DIRECTION_DOWN
         elif self.change_x < 0:
             self.direction = DIRECTION_LEFT
-            self.facing_direction = DIRECTION_LEFT  # Update attack facing
+            self.facing_direction = DIRECTION_LEFT
         elif self.change_x > 0:
             self.direction = DIRECTION_RIGHT
             self.facing_direction = DIRECTION_RIGHT
+
 
         self.cur_texture += 1
 
@@ -164,7 +173,7 @@ class Game(arcade.Window):
                 self.player.change_x = PLAYER_SPEED
 
         self.physics_engine.update()
-        self.player.update_animation(delta_time)
+        self.player.character_animation(delta_time)
         self.camera.position = self.player.position
 
     def on_key_press(self, key, modifiers):

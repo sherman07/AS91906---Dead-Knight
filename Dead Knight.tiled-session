@@ -1,5 +1,5 @@
 {
-    "activeFile": "Level_01.tmx",
+    "activeFile": "Dungeon Tileset.tsx",
     "expandedProjectPaths": [
     ],
     "file.lastUsedOpenFilter": "All Files (*)",
@@ -79,11 +79,11 @@
             "scaleInEditor": 3
         },
         "Level_01.tmx": {
-            "scale": 1.948,
-            "selectedLayer": 3,
+            "scale": 0.99,
+            "selectedLayer": 4,
             "viewCenter": {
-                "x": 1091.1190965092405,
-                "y": 1066.4784394250514
+                "x": 728.7878787878788,
+                "y": 1768.6868686868688
             }
         },
         "Level_01.tmx#Candlestick_01": {
@@ -169,12 +169,13 @@
     "last.imagePath": "/Users/zhenghui/Desktop/Dead-Knight/2D Pixel Dungeon Asset Pack/animations/peaks_32*32",
     "openFiles": [
         "Level_01.tmx",
-        "peaks.tsx"
+        "peaks.tsx",
+        "Dungeon Tileset.tsx"
     ],
     "project": "Dead Knight.tiled-project",
     "recentFiles": [
-        "peaks.tsx",
         "Level_01.tmx",
+        "peaks.tsx",
         "Dungeon Tileset.tsx",
         "Candlestick_02.tsx",
         "Maps/Level_01.tmx",
