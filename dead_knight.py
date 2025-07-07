@@ -18,10 +18,14 @@ DIRECTION_RIGHT = 3
 
 class PlayerCharacter(arcade.Sprite):
     def __init__(self):
+        super().__init__()
         self.cur_texture = 0
         self.direction = DIRECTION_DOWN
         self.facing_direction = DIRECTION_RIGHT  # For attack only
         self.is_attacking = False
+        self.current_attack = 0  # 0 = none, 1 = attack1, 2 = attack2
+        self.attack_cooldown = 0
+        self.combo_window = 0.3  # Time to chain next attack
 
         dir_name = os.path.dirname(os.path.abspath(__file__))
         character_path = os.path.join(dir_name, "knight_character", "knight")
@@ -67,6 +71,12 @@ class PlayerCharacter(arcade.Sprite):
             DIRECTION_UP: [],
             DIRECTION_DOWN: []
         }
+        self.attack2_textures = {
+            DIRECTION_RIGHT: [],
+            DIRECTION_LEFT: [],
+            DIRECTION_UP: [],
+            DIRECTION_DOWN: []
+        }
         for i in range(7):
             self.attack_textures[DIRECTION_RIGHT].append(
                 arcade.load_texture(f"{character_path}_right_attack{i}.png"))
@@ -76,6 +86,16 @@ class PlayerCharacter(arcade.Sprite):
                 arcade.load_texture(f"{character_path}_up_attack{i}.png"))
             self.attack_textures[DIRECTION_DOWN].append(
                 arcade.load_texture(f"{character_path}_down_attack{i}.png"))
+            
+             # Second attack animation
+            self.attack2_textures[DIRECTION_RIGHT].append(
+                arcade.load_texture(f"{character_path}_right_attack2_{i}.png"))
+            self.attack2_textures[DIRECTION_LEFT].append(
+                arcade.load_texture(f"{character_path}_left_attack2_{i}.png"))
+            self.attack2_textures[DIRECTION_UP].append(
+                arcade.load_texture(f"{character_path}_up_attack2_{i}.png"))
+            self.attack2_textures[DIRECTION_DOWN].append(
+                arcade.load_texture(f"{character_path}_down_attack2_{i}.png"))
 
         super().__init__(self.idle_textures[DIRECTION_RIGHT][0], scale=CHARACTER_SCALING)
 
@@ -94,36 +114,61 @@ class PlayerCharacter(arcade.Sprite):
             self.direction = DIRECTION_RIGHT
             self.facing_direction = DIRECTION_RIGHT
 
+       # Handle attack cooldown
+        if self.attack_cooldown > 0:
+            self.attack_cooldown -= delta_time
 
-        self.cur_texture += 1
-
-        # Attack animation
-        if self.is_attacking:
-            if self.cur_texture >= 5 * UPDATES_PER_FRAME:
+        # Attack animation logic
+        if self.current_attack > 0:
+            self.cur_texture += 1
+            
+            # Determine which attack animation to use
+            attack_textures = self.attack_textures if self.current_attack == 1 else self.attack2_textures
+            attack_frames = 5 * UPDATES_PER_FRAME  # 5 frames per attack
+            
+            # Check if attack animation is complete
+            if self.cur_texture >= attack_frames:
+                self.current_attack = 0
                 self.cur_texture = 0
-                self.is_attacking = False
-            frame = self.cur_texture // UPDATES_PER_FRAME
-            frame = min(frame, len(self.attack_textures[self.facing_direction]) - 1)
-            self.texture = self.attack_textures[self.facing_direction][frame]
+                self.attack_cooldown = 0.1  # Small cooldown between attacks
+            else:
+                frame = min(self.cur_texture // UPDATES_PER_FRAME, 6)
+                self.texture = attack_textures[self.facing_direction][frame]
+            
+            # Enable combo during last part of attack
+            if self.cur_texture >= 3 * UPDATES_PER_FRAME:
+                self.can_combo = True
             return
 
-        # Idle animation
+        # Movement animations (only if not attacking)
+        self.cur_texture += 1
         if self.change_x == 0 and self.change_y == 0:
             if self.cur_texture >= 7 * UPDATES_PER_FRAME:
                 self.cur_texture = 0
             frame = self.cur_texture // UPDATES_PER_FRAME
             self.texture = self.idle_textures[self.direction][frame]
         else:
-            # Walking animation
             if self.cur_texture >= 7 * UPDATES_PER_FRAME:
                 self.cur_texture = 0
             frame = self.cur_texture // UPDATES_PER_FRAME
             self.texture = self.walk_textures[self.direction][frame]
 
     def attack(self):
-        if not self.is_attacking:
-            self.is_attacking = True
+        if self.current_attack == 0 and self.attack_cooldown <= 0:
+            # Start first attack
+            self.current_attack = 1
             self.cur_texture = 0
+            self.can_combo = False
+        elif self.current_attack == 1 and self.can_combo:
+            # Chain into second attack
+            self.current_attack = 2
+            self.cur_texture = 0
+            self.can_combo = False
+        elif self.current_attack == 2 and self.can_combo:
+            # Reset back to first attack
+            self.current_attack = 1
+            self.cur_texture = 0
+            self.can_combo = False
 
 
 class Game(arcade.Window):
@@ -162,15 +207,16 @@ class Game(arcade.Window):
         self.player.change_x = 0
         self.player.change_y = 0
 
-        if not self.player.is_attacking:
-            if arcade.key.W in self.held_keys:
+        if self.player.current_attack == 0:  # Only move when not attacking
+            if arcade.key.W in self.held_keys or arcade.key.UP in self.held_keys:
                 self.player.change_y = PLAYER_SPEED
-            if arcade.key.S in self.held_keys:
+            if arcade.key.S in self.held_keys or arcade.key.DOWN in self.held_keys:
                 self.player.change_y = -PLAYER_SPEED
-            if arcade.key.A in self.held_keys:
+            if arcade.key.A in self.held_keys or arcade.key.LEFT in self.held_keys:
                 self.player.change_x = -PLAYER_SPEED
-            if arcade.key.D in self.held_keys:
+            if arcade.key.D in self.held_keys or arcade.key.RIGHT in self.held_keys:
                 self.player.change_x = PLAYER_SPEED
+
 
         self.physics_engine.update()
         self.player.character_animation(delta_time)
@@ -188,3 +234,5 @@ if __name__ == "__main__":
     window = Game()
     window.setup()
     arcade.run()
+
+
