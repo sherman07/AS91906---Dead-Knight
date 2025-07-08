@@ -1,5 +1,6 @@
 import arcade
 import os
+import time
 
 # Constants
 SCREEN_WIDTH = 1440
@@ -21,16 +22,26 @@ class PlayerCharacter(arcade.Sprite):
         super().__init__()
         self.cur_texture = 0
         self.direction = DIRECTION_DOWN
-        self.facing_direction = DIRECTION_RIGHT  # For attack only
+        self.facing_direction = DIRECTION_RIGHT
         self.is_attacking = False
-        self.current_attack = 0  # 0 = none, 1 = attack1, 2 = attack2
+        self.current_attack = 0 
         self.attack_cooldown = 0
-        self.combo_window = 0.3  # Time to chain next attack
+        self.combo_window = 0.3
+        self.can_combo = False
+        
+
+        self.is_dashing = False
+        self.dash_cooldown = 0
+        self.dash_duration = 0.2
+        self.dash_speed = 7
+        self.dash_cooldown_time = 0.5
+        self.dash_start_time = 0
+        self.original_speed = PLAYER_SPEED
 
         dir_name = os.path.dirname(os.path.abspath(__file__))
         character_path = os.path.join(dir_name, "knight_character", "knight")
 
-        # Load idle textures
+
         self.idle_textures = {
             DIRECTION_UP: [],
             DIRECTION_DOWN: [],
@@ -47,7 +58,6 @@ class PlayerCharacter(arcade.Sprite):
             self.idle_textures[DIRECTION_DOWN].append(
                 arcade.load_texture(f"{character_path}_down_idle{i}.png"))
 
-        # Load walk textures
         self.walk_textures = {
             DIRECTION_RIGHT: [],
             DIRECTION_LEFT: [],
@@ -64,7 +74,6 @@ class PlayerCharacter(arcade.Sprite):
             self.walk_textures[DIRECTION_DOWN].append(
                 arcade.load_texture(f"{character_path}_down_run{i}.png"))
 
-        # Load attack textures (only left/right)
         self.attack_textures = {
             DIRECTION_RIGHT: [],
             DIRECTION_LEFT: [],
@@ -87,7 +96,6 @@ class PlayerCharacter(arcade.Sprite):
             self.attack_textures[DIRECTION_DOWN].append(
                 arcade.load_texture(f"{character_path}_down_attack{i}.png"))
             
-             # Second attack animation
             self.attack2_textures[DIRECTION_RIGHT].append(
                 arcade.load_texture(f"{character_path}_right_attack2_{i}.png"))
             self.attack2_textures[DIRECTION_LEFT].append(
@@ -96,6 +104,23 @@ class PlayerCharacter(arcade.Sprite):
                 arcade.load_texture(f"{character_path}_up_attack2_{i}.png"))
             self.attack2_textures[DIRECTION_DOWN].append(
                 arcade.load_texture(f"{character_path}_down_attack2_{i}.png"))
+
+
+        self.dash_textures = {
+            DIRECTION_RIGHT: [],
+            DIRECTION_LEFT: [],
+            DIRECTION_UP: [],
+            DIRECTION_DOWN: []
+        }
+        for i in range(7):
+            self.dash_textures[DIRECTION_RIGHT].append(
+                arcade.load_texture(f"{character_path}_right_dash{i}.png"))
+            self.dash_textures[DIRECTION_LEFT].append(
+                arcade.load_texture(f"{character_path}_left_dash{i}.png"))
+            self.dash_textures[DIRECTION_UP].append(
+                arcade.load_texture(f"{character_path}_up_dash{i}.png"))
+            self.dash_textures[DIRECTION_DOWN].append(
+                arcade.load_texture(f"{character_path}_down_dash{i}.png"))
 
         super().__init__(self.idle_textures[DIRECTION_RIGHT][0], scale=CHARACTER_SCALING)
 
@@ -114,7 +139,28 @@ class PlayerCharacter(arcade.Sprite):
             self.direction = DIRECTION_RIGHT
             self.facing_direction = DIRECTION_RIGHT
 
-       # Handle attack cooldown
+        # Handle dash cooldown
+        if self.dash_cooldown > 0:
+            self.dash_cooldown -= delta_time
+
+        # Dash animation and movement
+        if self.is_dashing:
+            self.cur_texture += 1
+            dash_frames = len(self.dash_textures[self.facing_direction]) * UPDATES_PER_FRAME
+            
+            # End dash if duration exceeded or animation complete
+            if (time.time() - self.dash_start_time) >= self.dash_duration or self.cur_texture >= dash_frames:
+                self.is_dashing = False
+                self.cur_texture = 0
+                self.change_x = 0
+                self.change_y = 0
+            else:
+                frame = min(self.cur_texture // UPDATES_PER_FRAME, 
+                           len(self.dash_textures[self.facing_direction]) - 1)
+                self.texture = self.dash_textures[self.facing_direction][frame]
+            return
+
+        # Handle attack cooldown
         if self.attack_cooldown > 0:
             self.attack_cooldown -= delta_time
 
@@ -122,25 +168,22 @@ class PlayerCharacter(arcade.Sprite):
         if self.current_attack > 0:
             self.cur_texture += 1
             
-            # Determine which attack animation to use
             attack_textures = self.attack_textures if self.current_attack == 1 else self.attack2_textures
-            attack_frames = 5 * UPDATES_PER_FRAME  # 5 frames per attack
+            attack_frames = 5 * UPDATES_PER_FRAME
             
-            # Check if attack animation is complete
             if self.cur_texture >= attack_frames:
                 self.current_attack = 0
                 self.cur_texture = 0
-                self.attack_cooldown = 0.1  # Small cooldown between attacks
+                self.attack_cooldown = 0.1
             else:
                 frame = min(self.cur_texture // UPDATES_PER_FRAME, 6)
                 self.texture = attack_textures[self.facing_direction][frame]
             
-            # Enable combo during last part of attack
             if self.cur_texture >= 3 * UPDATES_PER_FRAME:
                 self.can_combo = True
             return
 
-        # Movement animations (only if not attacking)
+        # Movement animations
         self.cur_texture += 1
         if self.change_x == 0 and self.change_y == 0:
             if self.cur_texture >= 7 * UPDATES_PER_FRAME:
@@ -155,21 +198,38 @@ class PlayerCharacter(arcade.Sprite):
 
     def attack(self):
         if self.current_attack == 0 and self.attack_cooldown <= 0:
-            # Start first attack
             self.current_attack = 1
             self.cur_texture = 0
             self.can_combo = False
         elif self.current_attack == 1 and self.can_combo:
-            # Chain into second attack
             self.current_attack = 2
             self.cur_texture = 0
             self.can_combo = False
         elif self.current_attack == 2 and self.can_combo:
-            # Reset back to first attack
             self.current_attack = 1
             self.cur_texture = 0
             self.can_combo = False
 
+    def dash(self):
+        if not self.is_dashing and self.dash_cooldown <= 0 and self.current_attack == 0:
+            self.is_dashing = True
+            self.dash_cooldown = self.dash_cooldown_time
+            self.cur_texture = 0
+            self.dash_start_time = time.time()
+            
+            # Set dash direction based on facing direction
+            if self.facing_direction == DIRECTION_RIGHT:
+                self.change_x = self.dash_speed
+                self.change_y = 0
+            elif self.facing_direction == DIRECTION_LEFT:
+                self.change_x = -self.dash_speed
+                self.change_y = 0
+            elif self.facing_direction == DIRECTION_UP:
+                self.change_x = 0
+                self.change_y = self.dash_speed
+            elif self.facing_direction == DIRECTION_DOWN:
+                self.change_x = 0
+                self.change_y = -self.dash_speed
 
 class Game(arcade.Window):
     def __init__(self):
@@ -191,8 +251,8 @@ class Game(arcade.Window):
         self.scene = arcade.Scene.from_tilemap(tilemap)
 
         self.player = PlayerCharacter()
-        self.player.center_x = 1200
-        self.player.center_y = 300
+        self.player.center_x = 1150
+        self.player.center_y = 230
         self.scene.add_sprite("Player", self.player)
 
         self.physics_engine = arcade.PhysicsEngineSimple(self.player, self.scene["Walls"])
@@ -204,19 +264,20 @@ class Game(arcade.Window):
         self.scene.draw()
 
     def on_update(self, delta_time):
-        self.player.change_x = 0
-        self.player.change_y = 0
+        # Reset movement if not dashing (dash maintains its own movement)
+        if not self.player.is_dashing:
+            self.player.change_x = 0
+            self.player.change_y = 0
 
-        if self.player.current_attack == 0:  # Only move when not attacking
-            if arcade.key.W in self.held_keys or arcade.key.UP in self.held_keys:
-                self.player.change_y = PLAYER_SPEED
-            if arcade.key.S in self.held_keys or arcade.key.DOWN in self.held_keys:
-                self.player.change_y = -PLAYER_SPEED
-            if arcade.key.A in self.held_keys or arcade.key.LEFT in self.held_keys:
-                self.player.change_x = -PLAYER_SPEED
-            if arcade.key.D in self.held_keys or arcade.key.RIGHT in self.held_keys:
-                self.player.change_x = PLAYER_SPEED
-
+            if self.player.current_attack == 0:  # Only move when not attacking
+                if arcade.key.W in self.held_keys or arcade.key.UP in self.held_keys:
+                    self.player.change_y = PLAYER_SPEED
+                if arcade.key.S in self.held_keys or arcade.key.DOWN in self.held_keys:
+                    self.player.change_y = -PLAYER_SPEED
+                if arcade.key.A in self.held_keys or arcade.key.LEFT in self.held_keys:
+                    self.player.change_x = -PLAYER_SPEED
+                if arcade.key.D in self.held_keys or arcade.key.RIGHT in self.held_keys:
+                    self.player.change_x = PLAYER_SPEED
 
         self.physics_engine.update()
         self.player.character_animation(delta_time)
@@ -226,6 +287,8 @@ class Game(arcade.Window):
         self.held_keys.add(key)
         if key == arcade.key.SPACE:
             self.player.attack()
+        elif key == arcade.key.LSHIFT:  # Left Shift for dash
+            self.player.dash()
 
     def on_key_release(self, key, modifiers):
         self.held_keys.discard(key)
@@ -234,5 +297,3 @@ if __name__ == "__main__":
     window = Game()
     window.setup()
     arcade.run()
-
-
