@@ -38,6 +38,12 @@ class PlayerCharacter(arcade.Sprite):
         self.dash_start_time = 0
         self.original_speed = PLAYER_SPEED
 
+
+        #Hurt
+        self.is_hurt = False
+        self.hurt_start_time = 0
+        self.hurt_duration = 0.5
+
         dir_name = os.path.dirname(os.path.abspath(__file__))
         character_path = os.path.join(dir_name, "knight_character", "knight")
 
@@ -121,6 +127,17 @@ class PlayerCharacter(arcade.Sprite):
                 arcade.load_texture(f"{character_path}_up_dash{i}.png"))
             self.dash_textures[DIRECTION_DOWN].append(
                 arcade.load_texture(f"{character_path}_down_dash{i}.png"))
+            
+        self.hurt_textures = {
+            DIRECTION_RIGHT: [],
+            DIRECTION_LEFT: [],
+            DIRECTION_UP: [],
+            DIRECTION_DOWN: []
+        }
+        for i in range(4):  # Assuming 4 frames for hurt animation
+            self.hurt_textures[DIRECTION_RIGHT].append(
+                arcade.load_texture(f"{character_path}_right_hurt{i}.png"))
+
 
         super().__init__(self.idle_textures[DIRECTION_RIGHT][0], scale=CHARACTER_SCALING)
 
@@ -138,6 +155,18 @@ class PlayerCharacter(arcade.Sprite):
         elif self.change_x > 0:
             self.direction = DIRECTION_RIGHT
             self.facing_direction = DIRECTION_RIGHT
+
+        if self.is_hurt:
+            elapsed = time.time() - self.hurt_start_time
+            if elapsed >= self.hurt_duration:
+                self.is_hurt = False
+                self.cur_texture = 0
+            else:
+                # Calculate current frame based on elapsed time
+                frame = min(int(elapsed / self.hurt_duration * len(self.hurt_textures[self.facing_direction])), 
+                           len(self.hurt_textures[self.facing_direction]) - 1)
+                self.texture = self.hurt_textures[self.facing_direction][frame]
+            return
 
         # Handle dash cooldown
         if self.dash_cooldown > 0:
@@ -231,6 +260,14 @@ class PlayerCharacter(arcade.Sprite):
                 self.change_x = 0
                 self.change_y = -self.dash_speed
 
+    def hurt(self):
+        if not self.is_hurt and not self.is_dashing and self.current_attack == 0:
+            self.is_hurt = True
+            self.hurt_start_time = time.time()
+            self.change_x = 0
+            self.change_y = 0
+
+
 class Game(arcade.Window):
     def __init__(self):
         super().__init__(SCREEN_WIDTH, SCREEN_HEIGHT, SCREEN_TITLE)
@@ -252,7 +289,7 @@ class Game(arcade.Window):
 
         self.player = PlayerCharacter()
         self.player.center_x = 1150
-        self.player.center_y = 230
+        self.player.center_y = 250
         self.scene.add_sprite("Player", self.player)
 
         self.physics_engine = arcade.PhysicsEngineSimple(self.player, self.scene["Walls"])
@@ -289,6 +326,8 @@ class Game(arcade.Window):
             self.player.attack()
         elif key == arcade.key.LSHIFT:  # Left Shift for dash
             self.player.dash()
+        elif key == arcade.key.F:  # F key for hurt animation
+            self.player.hurt()
 
     def on_key_release(self, key, modifiers):
         self.held_keys.discard(key)
