@@ -29,7 +29,7 @@ class PlayerCharacter(arcade.Sprite):
         self.combo_window = 0.3
         self.can_combo = False
         
-
+        # Dash properties
         self.is_dashing = False
         self.dash_cooldown = 0
         self.dash_duration = 0.2
@@ -37,111 +37,121 @@ class PlayerCharacter(arcade.Sprite):
         self.dash_cooldown_time = 0.5
         self.dash_start_time = 0
         self.original_speed = PLAYER_SPEED
-
-
-        #Hurt
+        
+        # Hurt/death properties
         self.is_hurt = False
         self.hurt_start_time = 0
         self.hurt_duration = 0.5
+        self.hurt_count = 0
+        self.max_hits_before_death = 5
+        self.is_dead = False
 
         dir_name = os.path.dirname(os.path.abspath(__file__))
         character_path = os.path.join(dir_name, "knight_character", "knight")
 
-
+        # Load all textures
         self.idle_textures = {
-            DIRECTION_UP: [],
-            DIRECTION_DOWN: [],
-            DIRECTION_RIGHT: [],
-            DIRECTION_LEFT: []
+            DIRECTION_UP: [], DIRECTION_DOWN: [], 
+            DIRECTION_RIGHT: [], DIRECTION_LEFT: []
         }
-        for i in range(7):
-            self.idle_textures[DIRECTION_RIGHT].append(
-                arcade.load_texture(f"{character_path}_right_idle{i}.png"))
-            self.idle_textures[DIRECTION_LEFT].append(
-                arcade.load_texture(f"{character_path}_left_idle{i}.png"))
-            self.idle_textures[DIRECTION_UP].append(
-                arcade.load_texture(f"{character_path}_up_idle{i}.png"))
-            self.idle_textures[DIRECTION_DOWN].append(
-                arcade.load_texture(f"{character_path}_down_idle{i}.png"))
-
         self.walk_textures = {
-            DIRECTION_RIGHT: [],
-            DIRECTION_LEFT: [],
-            DIRECTION_UP: [],
-            DIRECTION_DOWN: []
+            DIRECTION_UP: [], DIRECTION_DOWN: [], 
+            DIRECTION_RIGHT: [], DIRECTION_LEFT: []
         }
-        for i in range(7):
-            self.walk_textures[DIRECTION_RIGHT].append(
-                arcade.load_texture(f"{character_path}_right_run{i}.png"))
-            self.walk_textures[DIRECTION_LEFT].append(
-                arcade.load_texture(f"{character_path}_left_run{i}.png"))
-            self.walk_textures[DIRECTION_UP].append(
-                arcade.load_texture(f"{character_path}_up_run{i}.png"))
-            self.walk_textures[DIRECTION_DOWN].append(
-                arcade.load_texture(f"{character_path}_down_run{i}.png"))
-
         self.attack_textures = {
-            DIRECTION_RIGHT: [],
-            DIRECTION_LEFT: [],
-            DIRECTION_UP: [],
-            DIRECTION_DOWN: []
+            DIRECTION_UP: [], DIRECTION_DOWN: [], 
+            DIRECTION_RIGHT: [], DIRECTION_LEFT: []
         }
         self.attack2_textures = {
-            DIRECTION_RIGHT: [],
-            DIRECTION_LEFT: [],
-            DIRECTION_UP: [],
-            DIRECTION_DOWN: []
+            DIRECTION_UP: [], DIRECTION_DOWN: [], 
+            DIRECTION_RIGHT: [], DIRECTION_LEFT: []
         }
-        for i in range(7):
-            self.attack_textures[DIRECTION_RIGHT].append(
-                arcade.load_texture(f"{character_path}_right_attack{i}.png"))
-            self.attack_textures[DIRECTION_LEFT].append(
-                arcade.load_texture(f"{character_path}_left_attack{i}.png"))
-            self.attack_textures[DIRECTION_UP].append(
-                arcade.load_texture(f"{character_path}_up_attack{i}.png"))
-            self.attack_textures[DIRECTION_DOWN].append(
-                arcade.load_texture(f"{character_path}_down_attack{i}.png"))
-            
-            self.attack2_textures[DIRECTION_RIGHT].append(
-                arcade.load_texture(f"{character_path}_right_attack2_{i}.png"))
-            self.attack2_textures[DIRECTION_LEFT].append(
-                arcade.load_texture(f"{character_path}_left_attack2_{i}.png"))
-            self.attack2_textures[DIRECTION_UP].append(
-                arcade.load_texture(f"{character_path}_up_attack2_{i}.png"))
-            self.attack2_textures[DIRECTION_DOWN].append(
-                arcade.load_texture(f"{character_path}_down_attack2_{i}.png"))
-
-
         self.dash_textures = {
-            DIRECTION_RIGHT: [],
-            DIRECTION_LEFT: [],
-            DIRECTION_UP: [],
-            DIRECTION_DOWN: []
+            DIRECTION_UP: [], DIRECTION_DOWN: [], 
+            DIRECTION_RIGHT: [], DIRECTION_LEFT: []
         }
-        for i in range(7):
-            self.dash_textures[DIRECTION_RIGHT].append(
-                arcade.load_texture(f"{character_path}_right_dash{i}.png"))
-            self.dash_textures[DIRECTION_LEFT].append(
-                arcade.load_texture(f"{character_path}_left_dash{i}.png"))
-            self.dash_textures[DIRECTION_UP].append(
-                arcade.load_texture(f"{character_path}_up_dash{i}.png"))
-            self.dash_textures[DIRECTION_DOWN].append(
-                arcade.load_texture(f"{character_path}_down_dash{i}.png"))
-            
-        self.hurt_textures = {
-            DIRECTION_RIGHT: [],
-            DIRECTION_LEFT: [],
-            DIRECTION_UP: [],
-            DIRECTION_DOWN: []
-        }
-        for i in range(4):  # Assuming 4 frames for hurt animation
-            self.hurt_textures[DIRECTION_RIGHT].append(
-                arcade.load_texture(f"{character_path}_right_hurt{i}.png"))
 
+        self.death_textures = {
+            DIRECTION_UP: [], DIRECTION_DOWN: [], 
+            DIRECTION_RIGHT: [], DIRECTION_LEFT: []
+        }
+
+        self.hurt_textures = {
+            DIRECTION_UP: [], DIRECTION_DOWN: [], 
+            DIRECTION_RIGHT: [], DIRECTION_LEFT: []
+        }
+
+        # Load 7-frame animations
+        for i in range(7):
+            self.idle_textures[DIRECTION_RIGHT].append(arcade.load_texture(f"{character_path}_right_idle{i}.png"))
+            self.idle_textures[DIRECTION_LEFT].append(arcade.load_texture(f"{character_path}_left_idle{i}.png"))
+            self.idle_textures[DIRECTION_UP].append(arcade.load_texture(f"{character_path}_up_idle{i}.png"))
+            self.idle_textures[DIRECTION_DOWN].append(arcade.load_texture(f"{character_path}_down_idle{i}.png"))
+            
+            self.walk_textures[DIRECTION_RIGHT].append(arcade.load_texture(f"{character_path}_right_run{i}.png"))
+            self.walk_textures[DIRECTION_LEFT].append(arcade.load_texture(f"{character_path}_left_run{i}.png"))
+            self.walk_textures[DIRECTION_UP].append(arcade.load_texture(f"{character_path}_up_run{i}.png"))
+            self.walk_textures[DIRECTION_DOWN].append(arcade.load_texture(f"{character_path}_down_run{i}.png"))
+            
+            self.attack_textures[DIRECTION_RIGHT].append(arcade.load_texture(f"{character_path}_right_attack{i}.png"))
+            self.attack_textures[DIRECTION_LEFT].append(arcade.load_texture(f"{character_path}_left_attack{i}.png"))
+            self.attack_textures[DIRECTION_UP].append(arcade.load_texture(f"{character_path}_up_attack{i}.png"))
+            self.attack_textures[DIRECTION_DOWN].append(arcade.load_texture(f"{character_path}_down_attack{i}.png"))
+            
+            self.attack2_textures[DIRECTION_RIGHT].append(arcade.load_texture(f"{character_path}_right_attack2_{i}.png"))
+            self.attack2_textures[DIRECTION_LEFT].append(arcade.load_texture(f"{character_path}_left_attack2_{i}.png"))
+            self.attack2_textures[DIRECTION_UP].append(arcade.load_texture(f"{character_path}_up_attack2_{i}.png"))
+            self.attack2_textures[DIRECTION_DOWN].append(arcade.load_texture(f"{character_path}_down_attack2_{i}.png"))
+            
+            self.dash_textures[DIRECTION_RIGHT].append(arcade.load_texture(f"{character_path}_right_dash{i}.png"))
+            self.dash_textures[DIRECTION_LEFT].append(arcade.load_texture(f"{character_path}_left_dash{i}.png"))
+            self.dash_textures[DIRECTION_UP].append(arcade.load_texture(f"{character_path}_up_dash{i}.png"))
+            self.dash_textures[DIRECTION_DOWN].append(arcade.load_texture(f"{character_path}_down_dash{i}.png"))
+                        
+            self.death_textures[DIRECTION_RIGHT].append(arcade.load_texture(f"{character_path}_right_death{i}.png"))
+            self.death_textures[DIRECTION_LEFT].append(arcade.load_texture(f"{character_path}_left_death{i}.png"))
+            self.death_textures[DIRECTION_UP].append(arcade.load_texture(f"{character_path}_up_death{i}.png"))
+            self.death_textures[DIRECTION_DOWN].append(arcade.load_texture(f"{character_path}_down_death{i}.png"))
+
+
+        for i in range(4):
+            # Hurt and death animations (assuming same 7 frames)
+            self.hurt_textures[DIRECTION_RIGHT].append(arcade.load_texture(f"{character_path}_right_hurt{i}.png"))
+            self.hurt_textures[DIRECTION_LEFT].append(arcade.load_texture(f"{character_path}_left_hurt{i}.png"))
+            self.hurt_textures[DIRECTION_UP].append(arcade.load_texture(f"{character_path}_up_hurt{i}.png"))
+            self.hurt_textures[DIRECTION_DOWN].append(arcade.load_texture(f"{character_path}_down_hurt{i}.png"))
 
         super().__init__(self.idle_textures[DIRECTION_RIGHT][0], scale=CHARACTER_SCALING)
 
     def character_animation(self, delta_time: float = 1 / 60):
+        
+        if self.is_dead:
+            elapsed = time.time() - self.death_start_time
+            death_duration = 1.0
+            death_frames = len(self.death_textures[self.facing_direction])
+            
+
+            if elapsed < death_duration:
+                frame = min(int(elapsed / death_duration * death_frames), death_frames - 1)
+                self.texture = self.death_textures[self.facing_direction][frame]
+            else:
+
+                frame = death_frames - 1
+                self.texture = self.death_textures[self.facing_direction][frame]
+            return
+            
+        # Hurt animation comes next
+        if self.is_hurt:
+            elapsed = time.time() - self.hurt_start_time
+            if elapsed >= self.hurt_duration:
+                self.is_hurt = False
+                self.cur_texture = 0
+            else:
+                frame = min(int(elapsed / self.hurt_duration * len(self.hurt_textures[self.facing_direction])), 
+                           len(self.hurt_textures[self.facing_direction]) - 1)
+                self.texture = self.hurt_textures[self.facing_direction][frame]
+            return
+
         # Update direction based on movement
         if self.change_y > 0:
             self.direction = DIRECTION_UP
@@ -156,18 +166,6 @@ class PlayerCharacter(arcade.Sprite):
             self.direction = DIRECTION_RIGHT
             self.facing_direction = DIRECTION_RIGHT
 
-        if self.is_hurt:
-            elapsed = time.time() - self.hurt_start_time
-            if elapsed >= self.hurt_duration:
-                self.is_hurt = False
-                self.cur_texture = 0
-            else:
-                # Calculate current frame based on elapsed time
-                frame = min(int(elapsed / self.hurt_duration * len(self.hurt_textures[self.facing_direction])), 
-                           len(self.hurt_textures[self.facing_direction]) - 1)
-                self.texture = self.hurt_textures[self.facing_direction][frame]
-            return
-
         # Handle dash cooldown
         if self.dash_cooldown > 0:
             self.dash_cooldown -= delta_time
@@ -177,7 +175,6 @@ class PlayerCharacter(arcade.Sprite):
             self.cur_texture += 1
             dash_frames = len(self.dash_textures[self.facing_direction]) * UPDATES_PER_FRAME
             
-            # End dash if duration exceeded or animation complete
             if (time.time() - self.dash_start_time) >= self.dash_duration or self.cur_texture >= dash_frames:
                 self.is_dashing = False
                 self.cur_texture = 0
@@ -226,27 +223,26 @@ class PlayerCharacter(arcade.Sprite):
             self.texture = self.walk_textures[self.direction][frame]
 
     def attack(self):
-        if self.current_attack == 0 and self.attack_cooldown <= 0:
+        if not self.is_dead and self.current_attack == 0 and self.attack_cooldown <= 0:
             self.current_attack = 1
             self.cur_texture = 0
             self.can_combo = False
-        elif self.current_attack == 1 and self.can_combo:
+        elif not self.is_dead and self.current_attack == 1 and self.can_combo:
             self.current_attack = 2
             self.cur_texture = 0
             self.can_combo = False
-        elif self.current_attack == 2 and self.can_combo:
+        elif not self.is_dead and self.current_attack == 2 and self.can_combo:
             self.current_attack = 1
             self.cur_texture = 0
             self.can_combo = False
 
     def dash(self):
-        if not self.is_dashing and self.dash_cooldown <= 0 and self.current_attack == 0:
+        if not self.is_dead and not self.is_dashing and self.dash_cooldown <= 0 and self.current_attack == 0:
             self.is_dashing = True
             self.dash_cooldown = self.dash_cooldown_time
             self.cur_texture = 0
             self.dash_start_time = time.time()
             
-            # Set dash direction based on facing direction
             if self.facing_direction == DIRECTION_RIGHT:
                 self.change_x = self.dash_speed
                 self.change_y = 0
@@ -261,12 +257,26 @@ class PlayerCharacter(arcade.Sprite):
                 self.change_y = -self.dash_speed
 
     def hurt(self):
-        if not self.is_hurt and not self.is_dashing and self.current_attack == 0:
+        if not self.is_dead and not self.is_hurt and not self.is_dashing and self.current_attack == 0:
             self.is_hurt = True
             self.hurt_start_time = time.time()
+            self.hurt_count += 1
             self.change_x = 0
             self.change_y = 0
+            
+            # Check for death
+            if self.hurt_count >= self.max_hits_before_death:
+                self.die()
 
+    def die(self):
+        self.is_dead = True
+        # Stop all movement and actions
+        self.change_x = 0
+        self.change_y = 0
+        self.is_dashing = False
+        self.current_attack = 0
+        # Set to first frame of death animation
+        self.texture = self.death_textures[self.facing_direction][0]
 
 class Game(arcade.Window):
     def __init__(self):
@@ -301,20 +311,25 @@ class Game(arcade.Window):
         self.scene.draw()
 
     def on_update(self, delta_time):
-        # Reset movement if not dashing (dash maintains its own movement)
-        if not self.player.is_dashing:
+        # Don't process movement if dead
+        if self.player.is_dead:
             self.player.change_x = 0
             self.player.change_y = 0
+        else:
+            # Reset movement if not dashing or hurt
+            if not self.player.is_dashing and not self.player.is_hurt:
+                self.player.change_x = 0
+                self.player.change_y = 0
 
-            if self.player.current_attack == 0:  # Only move when not attacking
-                if arcade.key.W in self.held_keys or arcade.key.UP in self.held_keys:
-                    self.player.change_y = PLAYER_SPEED
-                if arcade.key.S in self.held_keys or arcade.key.DOWN in self.held_keys:
-                    self.player.change_y = -PLAYER_SPEED
-                if arcade.key.A in self.held_keys or arcade.key.LEFT in self.held_keys:
-                    self.player.change_x = -PLAYER_SPEED
-                if arcade.key.D in self.held_keys or arcade.key.RIGHT in self.held_keys:
-                    self.player.change_x = PLAYER_SPEED
+                if self.player.current_attack == 0:  # Only move when not attacking
+                    if arcade.key.W in self.held_keys or arcade.key.UP in self.held_keys:
+                        self.player.change_y = PLAYER_SPEED
+                    if arcade.key.S in self.held_keys or arcade.key.DOWN in self.held_keys:
+                        self.player.change_y = -PLAYER_SPEED
+                    if arcade.key.A in self.held_keys or arcade.key.LEFT in self.held_keys:
+                        self.player.change_x = -PLAYER_SPEED
+                    if arcade.key.D in self.held_keys or arcade.key.RIGHT in self.held_keys:
+                        self.player.change_x = PLAYER_SPEED
 
         self.physics_engine.update()
         self.player.character_animation(delta_time)
