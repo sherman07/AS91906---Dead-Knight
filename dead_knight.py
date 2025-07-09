@@ -46,6 +46,13 @@ class PlayerCharacter(arcade.Sprite):
         self.max_hits_before_death = 5
         self.is_dead = False
 
+        self.heal_amount = 1
+        self.heal_cooldown = 0
+        self.heal_cooldown_time = 1.0
+        self.is_healing = False
+        self.heal_start_time = 0
+        self.heal_duration = 0.5
+
         dir_name = os.path.dirname(os.path.abspath(__file__))
         character_path = os.path.join(dir_name, "knight_character", "knight")
 
@@ -80,6 +87,23 @@ class PlayerCharacter(arcade.Sprite):
             DIRECTION_UP: [], DIRECTION_DOWN: [], 
             DIRECTION_RIGHT: [], DIRECTION_LEFT: []
         }
+
+        self.heal_textures = {
+            DIRECTION_RIGHT: [],
+            DIRECTION_LEFT: [],
+            DIRECTION_UP: [],
+            DIRECTION_DOWN: []
+        }
+
+        for i in range(12):
+            self.heal_textures[DIRECTION_RIGHT].append(
+                arcade.load_texture(f"{character_path}_right_heal{i}.png"))
+            self.heal_textures[DIRECTION_LEFT].append(
+                arcade.load_texture(f"{character_path}_left_heal{i}.png"))
+            self.heal_textures[DIRECTION_UP].append(
+                arcade.load_texture(f"{character_path}_up_heal{i}.png"))
+            self.heal_textures[DIRECTION_DOWN].append(
+                arcade.load_texture(f"{character_path}_down_heal{i}.png"))
 
         # Load 7-frame animations
         for i in range(7):
@@ -124,20 +148,37 @@ class PlayerCharacter(arcade.Sprite):
         super().__init__(self.idle_textures[DIRECTION_RIGHT][0], scale=CHARACTER_SCALING)
 
     def character_animation(self, delta_time: float = 1 / 60):
-        
+
         if self.is_dead:
+            if not hasattr(self, 'death_start_time'):
+                self.death_start_time = time.time()
+                
             elapsed = time.time() - self.death_start_time
-            death_duration = 1.0
+            death_duration = 1.0  # 1 second for full death animation
             death_frames = len(self.death_textures[self.facing_direction])
             
-
+            # Calculate current frame
             if elapsed < death_duration:
                 frame = min(int(elapsed / death_duration * death_frames), death_frames - 1)
                 self.texture = self.death_textures[self.facing_direction][frame]
             else:
-
+                # After animation completes, stay on last frame
                 frame = death_frames - 1
                 self.texture = self.death_textures[self.facing_direction][frame]
+            return
+        
+        if self.heal_cooldown > 0:
+            self.heal_cooldown -= delta_time
+        
+        if self.is_healing:
+            elapsed = time.time() - self.heal_start_time
+            if elapsed >= self.heal_duration:
+                self.is_healing = False
+                self.cur_texture = 0
+            else:
+                frame = min(int(elapsed / self.heal_duration * len(self.heal_textures[self.facing_direction])), 
+                           len(self.heal_textures[self.facing_direction]) - 1)
+                self.texture = self.heal_textures[self.facing_direction][frame]
             return
             
         # Hurt animation comes next
@@ -221,6 +262,18 @@ class PlayerCharacter(arcade.Sprite):
                 self.cur_texture = 0
             frame = self.cur_texture // UPDATES_PER_FRAME
             self.texture = self.walk_textures[self.direction][frame]
+    
+    def heal(self):
+        if (not self.is_dead and not self.is_healing 
+            and not self.is_hurt and not self.is_dashing 
+            and self.current_attack == 0 and self.heal_cooldown <= 0):
+            
+            self.is_healing = True
+            self.heal_start_time = time.time()
+            self.heal_cooldown = self.heal_cooldown_time
+            self.hurt_count = max(0, self.hurt_count - self.heal_amount)
+            self.change_x = 0
+            self.change_y = 0
 
     def attack(self):
         if not self.is_dead and self.current_attack == 0 and self.attack_cooldown <= 0:
@@ -257,26 +310,31 @@ class PlayerCharacter(arcade.Sprite):
                 self.change_y = -self.dash_speed
 
     def hurt(self):
-        if not self.is_dead and not self.is_hurt and not self.is_dashing and self.current_attack == 0:
+        if (not self.is_dead and not self.is_hurt 
+            and not self.is_dashing and not self.is_healing
+            and self.current_attack == 0 and self.heal_cooldown <= 0):
+            
             self.is_hurt = True
             self.hurt_start_time = time.time()
             self.hurt_count += 1
             self.change_x = 0
             self.change_y = 0
             
-            # Check for death
             if self.hurt_count >= self.max_hits_before_death:
                 self.die()
 
     def die(self):
         self.is_dead = True
+        self.death_start_time = time.time()  # Initialize death timer
         # Stop all movement and actions
         self.change_x = 0
         self.change_y = 0
         self.is_dashing = False
         self.current_attack = 0
         # Set to first frame of death animation
+        self.cur_texture = 0
         self.texture = self.death_textures[self.facing_direction][0]
+
 
 class Game(arcade.Window):
     def __init__(self):
@@ -343,6 +401,8 @@ class Game(arcade.Window):
             self.player.dash()
         elif key == arcade.key.F:  # F key for hurt animation
             self.player.hurt()
+        elif key == arcade.key.E:  # Heal button
+            self.player.heal()
 
     def on_key_release(self, key, modifiers):
         self.held_keys.discard(key)
