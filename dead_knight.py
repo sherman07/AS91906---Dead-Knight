@@ -375,7 +375,7 @@ class Game(arcade.Window):
             self.player.change_y = 0
         else:
             # Reset movement if not dashing or hurt
-            if not self.player.is_dashing and not self.player.is_hurt:
+            if not self.player.is_dashing and not self.player.is_healing and not self.player.is_hurt:
                 self.player.change_x = 0
                 self.player.change_y = 0
 
