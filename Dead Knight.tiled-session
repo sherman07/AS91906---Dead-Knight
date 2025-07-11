@@ -71,7 +71,7 @@
         "Extre Items.tsx": {
             "dynamicWrapping": false,
             "scaleInDock": 1,
-            "scaleInEditor": 3
+            "scaleInEditor": 4
         },
         "Flags.tsx": {
             "dynamicWrapping": true,
@@ -174,13 +174,13 @@
     ],
     "project": "Dead Knight.tiled-project",
     "recentFiles": [
+        "Extre Items.tsx",
         "Level_01.tmx",
         "peaks.tsx",
         "Dungeon Tileset.tsx",
         "Candlestick_02.tsx",
         "Maps/Level_01.tmx",
         "Collection Items.tsx",
-        "Extre Items.tsx",
         "Flags.tsx",
         "Candlestick_01.tsx",
         "Dungeon.tsx",

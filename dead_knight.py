@@ -6,10 +6,16 @@ import time
 SCREEN_WIDTH = 1440
 SCREEN_HEIGHT = 720
 SCREEN_TITLE = "Dead Knight"
-PLAYER_SPEED = 3
-TILE_SCALING = 1
-CHARACTER_SCALING = 1.35
+PLAYER_SPEED = 3.5
+TILE_SCALING = 1.5
+CHARACTER_SCALING = 2.2
 UPDATES_PER_FRAME = 5
+
+# Health bar constants
+HEALTHBAR_WIDTH = 100
+HEALTHBAR_HEIGHT = 15
+HEALTHBAR_OFFSET_Y = 50
+HEALTH_NUMBER_OFFSET = 10
 
 # Directions
 DIRECTION_UP = 0
@@ -33,7 +39,7 @@ class PlayerCharacter(arcade.Sprite):
         self.is_dashing = False
         self.dash_cooldown = 0
         self.dash_duration = 0.2
-        self.dash_speed = 7
+        self.dash_speed = 9
         self.dash_cooldown_time = 0.5
         self.dash_start_time = 0
         self.original_speed = PLAYER_SPEED
@@ -137,7 +143,6 @@ class PlayerCharacter(arcade.Sprite):
             self.death_textures[DIRECTION_UP].append(arcade.load_texture(f"{character_path}_up_death{i}.png"))
             self.death_textures[DIRECTION_DOWN].append(arcade.load_texture(f"{character_path}_down_death{i}.png"))
 
-
         for i in range(4):
             # Hurt and death animations (assuming same 7 frames)
             self.hurt_textures[DIRECTION_RIGHT].append(arcade.load_texture(f"{character_path}_right_hurt{i}.png"))
@@ -148,7 +153,6 @@ class PlayerCharacter(arcade.Sprite):
         super().__init__(self.idle_textures[DIRECTION_RIGHT][0], scale=CHARACTER_SCALING)
 
     def character_animation(self, delta_time: float = 1 / 60):
-
         if self.is_dead:
             if not hasattr(self, 'death_start_time'):
                 self.death_start_time = time.time()
@@ -350,23 +354,73 @@ class Game(arcade.Window):
         tilemap = arcade.load_tilemap(
             map_path,
             scaling=TILE_SCALING,
-            layer_options={"Walls": {"use_spatial_hash": True}}
+            layer_options={
+                "Walls": {"use_spatial_hash": True},
+                "Collision Items": {"use_spatial_hash": True}
+            }
         )
 
         self.scene = arcade.Scene.from_tilemap(tilemap)
 
         self.player = PlayerCharacter()
-        self.player.center_x = 1150
-        self.player.center_y = 250
+        self.player.center_x = 1700
+        self.player.center_y = 350
         self.scene.add_sprite("Player", self.player)
 
-        self.physics_engine = arcade.PhysicsEngineSimple(self.player, self.scene["Walls"])
+        # Combine both collision layers into one sprite list
+        walls_and_collision_items = arcade.SpriteList()
+        walls_and_collision_items.extend(self.scene["Walls"])
+        walls_and_collision_items.extend(self.scene["Collision Items"])
+
+        self.physics_engine = arcade.PhysicsEngineSimple(
+            self.player, 
+            walls_and_collision_items
+        )
         self.camera = arcade.Camera2D()
 
+    def draw_health_bar(self):
+    # Calculate positions - bottom left corner of the health bar
+        bar_left = self.player.center_x - HEALTHBAR_WIDTH / 2
+        bar_bottom = self.player.center_y + HEALTHBAR_OFFSET_Y - HEALTHBAR_HEIGHT / 2
+        
+        # Draw background of health bar (empty)
+        arcade.draw_lbwh_rectangle_filled(
+            bar_left,
+            bar_bottom,
+            HEALTHBAR_WIDTH,
+            HEALTHBAR_HEIGHT,
+            arcade.color.RED
+        )
+        
+        # Calculate width based on health
+        health_width = HEALTHBAR_WIDTH * (1 - self.player.hurt_count / self.player.max_hits_before_death)
+        
+        # Draw filled part of health bar
+        arcade.draw_lbwh_rectangle_filled(
+            bar_left,
+            bar_bottom,
+            health_width,
+            HEALTHBAR_HEIGHT,
+            arcade.color.GREEN
+        )
+        
+        # Draw health number
+        health_text = f"{self.player.max_hits_before_death - self.player.hurt_count}/{self.player.max_hits_before_death}"
+        arcade.draw_text(
+            health_text,
+            self.player.center_x,
+            self.player.center_y + HEALTHBAR_OFFSET_Y,
+            arcade.color.WHITE,
+            12,
+            align="center",
+            anchor_x="center",
+            anchor_y="center"
+        )
     def on_draw(self):
         self.clear()
         self.camera.use()
         self.scene.draw()
+        self.draw_health_bar()
 
     def on_update(self, delta_time):
         # Don't process movement if dead
