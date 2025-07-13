@@ -1,5 +1,5 @@
 {
-    "activeFile": "Dungeon Tileset.tsx",
+    "activeFile": "Level_01.tmx",
     "expandedProjectPaths": [
     ],
     "file.lastUsedOpenFilter": "All Files (*)",
@@ -79,11 +79,11 @@
             "scaleInEditor": 3
         },
         "Level_01.tmx": {
-            "scale": 0.99,
-            "selectedLayer": 4,
+            "scale": 2,
+            "selectedLayer": 5,
             "viewCenter": {
-                "x": 728.7878787878788,
-                "y": 1768.6868686868688
+                "x": 58.5,
+                "y": 1516.25
             }
         },
         "Level_01.tmx#Candlestick_01": {
@@ -158,7 +158,7 @@
         "peaks.tsx": {
             "dynamicWrapping": true,
             "scaleInDock": 1,
-            "scaleInEditor": 1
+            "scaleInEditor": 4
         },
         "test.tsx": {
             "scaleInDock": 1,
@@ -170,14 +170,15 @@
     "openFiles": [
         "Level_01.tmx",
         "peaks.tsx",
-        "Dungeon Tileset.tsx"
+        "Dungeon Tileset.tsx",
+        "Extre Items.tsx"
     ],
     "project": "Dead Knight.tiled-project",
     "recentFiles": [
         "Extre Items.tsx",
-        "Level_01.tmx",
-        "peaks.tsx",
         "Dungeon Tileset.tsx",
+        "peaks.tsx",
+        "Level_01.tmx",
         "Candlestick_02.tsx",
         "Maps/Level_01.tmx",
         "Collection Items.tsx",
