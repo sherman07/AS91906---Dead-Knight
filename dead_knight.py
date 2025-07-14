@@ -374,6 +374,14 @@ class Game(arcade.Window):
         self.peak_damage_phase = "wait"
         self.peak_phase_start_time = time.time()
 
+        self.arrow_damage_phase = "active"
+        self.arrow_phase_start_time = time.time()
+        self.arrow_damage_phase = "short"
+        self.arrow_phase_start_time = time.time()
+        self.next_arrow_phase = "long"
+
+
+
     def setup(self):
         map_path = os.path.join(os.path.dirname(__file__), "Level_01.tmx")
         tilemap = arcade.load_tilemap(
@@ -383,11 +391,10 @@ class Game(arcade.Window):
                 "Walls": {"use_spatial_hash": True},
                 "Collision Items": {"use_spatial_hash": True},
                 "Non Collision Items": {},
-                "Peaks": {}  # Enable spatial hash for performance
+                "Peaks": {},
+                "Arrow": {}
             }
         )
-
-        
 
         self.scene = arcade.Scene.from_tilemap(tilemap)
         
@@ -398,6 +405,14 @@ class Game(arcade.Window):
             self.scene.add_sprite_list("Peaks", sprite_list=self.peak_list)
         else:
             self.peak_list = arcade.SpriteList()
+
+        if "Arrow" in tilemap.sprite_lists:
+            self.arrow_list = tilemap.sprite_lists["Arrow"]
+            for arrow in self.arrow_list:
+                arrow.properties = {"damage": True, "damage_amount": 1}
+            self.scene.add_sprite_list("Arrow", sprite_list=self.arrow_list)
+        else:
+            self.arrow_list = arcade.SpriteList()
 
         self.player = PlayerCharacter()
         self.player.center_x = 1700
@@ -452,6 +467,7 @@ class Game(arcade.Window):
             anchor_x="center",
             anchor_y="center"
         )
+
     def on_draw(self):
         self.clear()
         self.camera.use()
@@ -485,11 +501,13 @@ class Game(arcade.Window):
         self.camera.position = self.player.position
 
         current_time = time.time()
+
         if not self.player.is_dead:
             if self.peak_damage_phase == "wait":
                 if current_time - self.peak_phase_start_time >= 4.2:
                     self.peak_damage_phase = "active"
                     self.peak_phase_start_time = current_time
+                    self.on_update(0)  # Force immediate entry into new phase
 
             elif self.peak_damage_phase == "active":
                 if current_time - self.peak_phase_start_time <= 2.0:
@@ -501,11 +519,48 @@ class Game(arcade.Window):
                 else:
                     self.peak_damage_phase = "cooldown"
                     self.peak_phase_start_time = current_time
+                    self.on_update(0)
 
             elif self.peak_damage_phase == "cooldown":
-                if current_time - self.peak_phase_start_time >= 0.4:
+                if current_time - self.peak_phase_start_time >= 0.2:
                     self.peak_damage_phase = "wait"
                     self.peak_phase_start_time = current_time
+                    self.on_update(0)
+
+        # ---------- Arrow Damage Phase Handling ----------
+        if not self.player.is_dead:
+            if self.arrow_damage_phase == "short":
+                if current_time - self.arrow_phase_start_time <= 0.1:
+                    arrows_hit = arcade.check_for_collision_with_list(self.player, self.arrow_list)
+                    if arrows_hit:
+                        self.player.hurt()
+                        self.flash_red = True
+                        self.flash_end_time = current_time
+                else:
+                    self.arrow_damage_phase = "wait"
+                    self.arrow_phase_start_time = current_time
+                    self.next_arrow_phase = "long"
+                    self.on_update(0)
+
+            elif self.arrow_damage_phase == "long":
+                if current_time - self.arrow_phase_start_time <= 0.25:
+                    arrows_hit = arcade.check_for_collision_with_list(self.player, self.arrow_list)
+                    if arrows_hit:
+                        self.player.hurt()
+                        self.flash_red = True
+                        self.flash_end_time = current_time
+                else:
+                    self.arrow_damage_phase = "short"
+                    self.arrow_phase_start_time = current_time
+                    self.on_update(0)
+
+            elif self.arrow_damage_phase == "wait":
+                if current_time - self.arrow_phase_start_time >= 2.0:
+                    self.arrow_damage_phase = self.next_arrow_phase
+                    self.arrow_phase_start_time = current_time
+                    self.on_update(0)
+
+
 
         self.camera.position = self.player.position
 

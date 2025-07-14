@@ -4,15 +4,22 @@
  <tile id="0">
   <image source="2D Pixel Dungeon Asset Pack/animations/arrow_32*32/arrow_2.png" width="32" height="96"/>
   <animation>
-   <frame tileid="0" duration="4000"/>
+   <frame tileid="1" duration="100"/>
+   <frame tileid="0" duration="2000"/>
    <frame tileid="4" duration="100"/>
    <frame tileid="3" duration="100"/>
    <frame tileid="2" duration="100"/>
-   <frame tileid="1" duration="100"/>
   </animation>
  </tile>
  <tile id="1">
   <image source="2D Pixel Dungeon Asset Pack/animations/arrow_32*32/arrow_5.png" width="32" height="96"/>
+  <animation>
+   <frame tileid="1" duration="100"/>
+   <frame tileid="0" duration="2000"/>
+   <frame tileid="4" duration="100"/>
+   <frame tileid="3" duration="100"/>
+   <frame tileid="2" duration="100"/>
+  </animation>
  </tile>
  <tile id="2">
   <image source="2D Pixel Dungeon Asset Pack/animations/arrow_32*32/arrow_1.png" width="32" height="96"/>
