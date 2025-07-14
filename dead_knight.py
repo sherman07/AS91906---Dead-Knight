@@ -369,6 +369,11 @@ class Game(arcade.Window):
         self.flash_red = False
         self.flash_end_time = 0
 
+        self.peak_damage_interval = 4
+        self.last_peak_damage_time = time.time()
+        self.peak_damage_phase = "wait"
+        self.peak_phase_start_time = time.time()
+
     def setup(self):
         map_path = os.path.join(os.path.dirname(__file__), "Level_01.tmx")
         tilemap = arcade.load_tilemap(
@@ -382,7 +387,17 @@ class Game(arcade.Window):
             }
         )
 
+        
+
         self.scene = arcade.Scene.from_tilemap(tilemap)
+        
+        if "Peaks" in tilemap.sprite_lists:
+            self.peak_list = tilemap.sprite_lists["Peaks"]
+            for peak in self.peak_list:
+                peak.properties = {"damage": True, "damage_amount": 1}
+            self.scene.add_sprite_list("Peaks", sprite_list=self.peak_list)
+        else:
+            self.peak_list = arcade.SpriteList()
 
         self.player = PlayerCharacter()
         self.player.center_x = 1700
@@ -398,16 +413,6 @@ class Game(arcade.Window):
             walls_and_collision_items
         )
         self.camera = arcade.Camera2D()
-
-        if "Peaks" in tilemap.sprite_lists:
-            self.peak_list = tilemap.sprite_lists["Peaks"]
-            # Set damage properties for all peak tiles
-            for peak in self.peak_list:
-                peak.properties = {"damage": True, "damage_amount": 1}
-            self.scene.add_sprite_list("Peaks", sprite_list=self.peak_list)
-        else:
-            self.peak_list = arcade.SpriteList()
-
 
     def draw_health_bar(self):
     # Calculate positions - bottom left corner of the health bar
@@ -479,15 +484,28 @@ class Game(arcade.Window):
         self.player.character_animation(delta_time)
         self.camera.position = self.player.position
 
+        current_time = time.time()
         if not self.player.is_dead:
-            current_time = time.time()
-            if current_time - self.last_damage_time > self.damage_cooldown:
-                peaks_hit = arcade.check_for_collision_with_list(self.player, self.peak_list)
-                if peaks_hit:
-                    self.last_damage_time = current_time
-                    self.player.hurt()
-                    self.flash_red = True
-                    self.flash_end_time = current_time + 0.2  # Flash for 0.2 seconds
+            if self.peak_damage_phase == "wait":
+                if current_time - self.peak_phase_start_time >= 4.2:
+                    self.peak_damage_phase = "active"
+                    self.peak_phase_start_time = current_time
+
+            elif self.peak_damage_phase == "active":
+                if current_time - self.peak_phase_start_time <= 2.0:
+                    peaks_hit = arcade.check_for_collision_with_list(self.player, self.peak_list)
+                    if peaks_hit:
+                        self.player.hurt()
+                        self.flash_red = True
+                        self.flash_end_time = current_time + 0.2
+                else:
+                    self.peak_damage_phase = "cooldown"
+                    self.peak_phase_start_time = current_time
+
+            elif self.peak_damage_phase == "cooldown":
+                if current_time - self.peak_phase_start_time >= 0.4:
+                    self.peak_damage_phase = "wait"
+                    self.peak_phase_start_time = current_time
 
         self.camera.position = self.player.position
 
