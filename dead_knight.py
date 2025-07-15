@@ -392,7 +392,8 @@ class Game(arcade.Window):
                 "Collision Items": {"use_spatial_hash": True},
                 "Non Collision Items": {},
                 "Peaks": {},
-                "Arrow": {}
+                "Arrow": {},
+                "Slow Speed Items": {}
             }
         )
 
@@ -413,6 +414,13 @@ class Game(arcade.Window):
             self.scene.add_sprite_list("Arrow", sprite_list=self.arrow_list)
         else:
             self.arrow_list = arcade.SpriteList()
+        
+        if "Slow Speed Items" in tilemap.sprite_lists:
+            self.slow_list = tilemap.sprite_lists["Slow Speed Items"]
+            self.scene.add_sprite_list("Slow Speed Items", sprite_list=self.slow_list)
+        else:
+            self.slow_list = arcade.SpriteList()
+
 
         self.player = PlayerCharacter()
         self.player.center_x = 1700
@@ -475,7 +483,7 @@ class Game(arcade.Window):
         self.draw_health_bar()
 
     def on_update(self, delta_time):
-        # Don't process movement if dead
+    # Don't process movement if dead
         if self.player.is_dead:
             self.player.change_x = 0
             self.player.change_y = 0
@@ -485,15 +493,19 @@ class Game(arcade.Window):
                 self.player.change_x = 0
                 self.player.change_y = 0
 
+                current_speed = PLAYER_SPEED
+                if arcade.check_for_collision_with_list(self.player, self.slow_list):
+                    current_speed *= 0.5
+
                 if self.player.current_attack == 0:  # Only move when not attacking
                     if arcade.key.W in self.held_keys or arcade.key.UP in self.held_keys:
-                        self.player.change_y = PLAYER_SPEED
+                        self.player.change_y = current_speed
                     if arcade.key.S in self.held_keys or arcade.key.DOWN in self.held_keys:
-                        self.player.change_y = -PLAYER_SPEED
+                        self.player.change_y = -current_speed
                     if arcade.key.A in self.held_keys or arcade.key.LEFT in self.held_keys:
-                        self.player.change_x = -PLAYER_SPEED
+                        self.player.change_x = -current_speed
                     if arcade.key.D in self.held_keys or arcade.key.RIGHT in self.held_keys:
-                        self.player.change_x = PLAYER_SPEED
+                        self.player.change_x = current_speed
 
         self.physics_engine.update()
         self.scene.update_animation(delta_time)
@@ -507,7 +519,7 @@ class Game(arcade.Window):
                 if current_time - self.peak_phase_start_time >= 4.2:
                     self.peak_damage_phase = "active"
                     self.peak_phase_start_time = current_time
-                    self.on_update(0)  # Force immediate entry into new phase
+                    self.on_update(0)
 
             elif self.peak_damage_phase == "active":
                 if current_time - self.peak_phase_start_time <= 2.0:
@@ -559,8 +571,6 @@ class Game(arcade.Window):
                     self.arrow_damage_phase = self.next_arrow_phase
                     self.arrow_phase_start_time = current_time
                     self.on_update(0)
-
-
 
         self.camera.position = self.player.position
 
