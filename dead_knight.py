@@ -62,6 +62,12 @@ class PlayerCharacter(arcade.Sprite):
         self.heal_start_time = 0
         self.heal_duration = 0.5
 
+        self.is_speed_boosted = False
+        self.speed_boost_start_time = 0
+        self.speed_boost_duration = 17.0
+        self.speed_multiplier = 1.5
+
+
         dir_name = os.path.dirname(os.path.abspath(__file__))
         character_path = os.path.join(dir_name, "knight_character", "knight")
 
@@ -354,6 +360,10 @@ class PlayerCharacter(arcade.Sprite):
         self.cur_texture = 0
         self.texture = self.death_textures[self.facing_direction][0]
 
+    def apply_speed_boost(self):
+        if not self.is_dead:
+            self.is_speed_boosted = True
+            self.speed_boost_start_time = time.time()
 
 class Game(arcade.Window):
     def __init__(self):
@@ -368,6 +378,7 @@ class Game(arcade.Window):
         self.damage_cooldown = 0.5
         self.flash_red = False
         self.flash_end_time = 0
+        self.flask_list = None
 
         self.peak_damage_interval = 4
         self.last_peak_damage_time = time.time()
@@ -381,7 +392,6 @@ class Game(arcade.Window):
         self.next_arrow_phase = "long"
 
 
-
     def setup(self):
         map_path = os.path.join(os.path.dirname(__file__), "Level_01.tmx")
         tilemap = arcade.load_tilemap(
@@ -393,7 +403,9 @@ class Game(arcade.Window):
                 "Non Collision Items": {},
                 "Peaks": {},
                 "Arrow": {},
-                "Slow Speed Items": {}
+                "Slow Speed Items": {},
+                "Small Health Flasks": {},
+                "Small Speed Flasks": {}
             }
         )
 
@@ -420,6 +432,19 @@ class Game(arcade.Window):
             self.scene.add_sprite_list("Slow Speed Items", sprite_list=self.slow_list)
         else:
             self.slow_list = arcade.SpriteList()
+
+        if "Small Health Flasks" in tilemap.sprite_lists:
+            self.flask_list = tilemap.sprite_lists["Small Health Flasks"]
+            self.scene.add_sprite_list("Small Health Flasks", sprite_list=self.flask_list)
+        else:
+            self.flask_list = arcade.SpriteList()
+        
+        if "Small Speed Flasks" in tilemap.sprite_lists:
+            self.speed_flask_list = tilemap.sprite_lists["Small Speed Flasks"]
+            self.scene.add_sprite_list("Small Speed Flasks", sprite_list=self.speed_flask_list)
+        else:
+            self.speed_flask_list = arcade.SpriteList()
+
 
 
         self.player = PlayerCharacter()
@@ -578,12 +603,26 @@ class Game(arcade.Window):
         self.held_keys.add(key)
         if key == arcade.key.SPACE:
             self.player.attack()
-        elif key == arcade.key.LSHIFT:  # Left Shift for dash
+        elif key == arcade.key.LSHIFT:
             self.player.dash()
-        elif key == arcade.key.F:  # F key for hurt animation
+        elif key == arcade.key.F:
             self.player.hurt()
-        elif key == arcade.key.E:  # Heal button
-            self.player.heal()
+        elif key == arcade.key.E:
+            if self.flask_list:
+                flasks_nearby = arcade.check_for_collision_with_list(self.player, self.flask_list)
+                if flasks_nearby:
+                    self.player.heal()
+                    for flask in flasks_nearby:
+                        flask.remove_from_sprite_lists()
+
+            if self.speed_flask_list:
+                speed_flasks_nearby = arcade.check_for_collision_with_list(self.player, self.speed_flask_list)
+                if speed_flasks_nearby:
+                    self.player.apply_speed_boost()
+                    for flask in speed_flasks_nearby:
+                        flask.remove_from_sprite_lists()
+
+
 
     def on_key_release(self, key, modifiers):
         self.held_keys.discard(key)
