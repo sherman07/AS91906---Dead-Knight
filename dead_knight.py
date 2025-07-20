@@ -6,7 +6,7 @@ import time
 SCREEN_WIDTH = 1440
 SCREEN_HEIGHT = 720
 SCREEN_TITLE = "Dead Knight"
-PLAYER_SPEED = 3.5
+PLAYER_SPEED = 3.7
 TILE_SCALING = 1.5
 CHARACTER_SCALING = 2
 UPDATES_PER_FRAME = 5
@@ -39,7 +39,7 @@ class PlayerCharacter(arcade.Sprite):
         self.is_dashing = False
         self.dash_cooldown = 0
         self.dash_duration = 0.2
-        self.dash_speed = 9
+        self.dash_speed = 10
         self.dash_cooldown_time = 0.5
         self.dash_start_time = 0
         self.original_speed = PLAYER_SPEED
@@ -365,6 +365,12 @@ class PlayerCharacter(arcade.Sprite):
             self.is_speed_boosted = True
             self.speed_boost_start_time = time.time()
 
+    def update_speed_boost(self):
+        if self.is_speed_boosted:
+            elapsed = time.time() - self.speed_boost_start_time
+            if elapsed >= 3.0:
+                self.is_speed_boosted = False
+
 class Game(arcade.Window):
     def __init__(self):
         super().__init__(SCREEN_WIDTH, SCREEN_HEIGHT, SCREEN_TITLE)
@@ -385,11 +391,15 @@ class Game(arcade.Window):
         self.peak_damage_phase = "wait"
         self.peak_phase_start_time = time.time()
 
-        self.arrow_damage_phase = "active"
-        self.arrow_phase_start_time = time.time()
         self.arrow_damage_phase = "short"
         self.arrow_phase_start_time = time.time()
         self.next_arrow_phase = "long"
+
+        # Health bar text label
+        self.health_label = arcade.Text(
+            "", 0, 0, arcade.color.WHITE, 12,
+            anchor_x="center", anchor_y="center"
+        )
 
 
     def setup(self):
@@ -411,39 +421,18 @@ class Game(arcade.Window):
 
         self.scene = arcade.Scene.from_tilemap(tilemap)
         
-        if "Peaks" in tilemap.sprite_lists:
-            self.peak_list = tilemap.sprite_lists["Peaks"]
-            for peak in self.peak_list:
-                peak.properties = {"damage": True, "damage_amount": 1}
-            self.scene.add_sprite_list("Peaks", sprite_list=self.peak_list)
-        else:
-            self.peak_list = arcade.SpriteList()
+        self.peak_list = tilemap.sprite_lists.get("Peaks", arcade.SpriteList())
+        for peak in self.peak_list:
+            peak.properties = {"damage": True, "damage_amount": 1}
 
-        if "Arrow" in tilemap.sprite_lists:
-            self.arrow_list = tilemap.sprite_lists["Arrow"]
-            for arrow in self.arrow_list:
-                arrow.properties = {"damage": True, "damage_amount": 1}
-            self.scene.add_sprite_list("Arrow", sprite_list=self.arrow_list)
-        else:
-            self.arrow_list = arcade.SpriteList()
-        
-        if "Slow Speed Items" in tilemap.sprite_lists:
-            self.slow_list = tilemap.sprite_lists["Slow Speed Items"]
-            self.scene.add_sprite_list("Slow Speed Items", sprite_list=self.slow_list)
-        else:
-            self.slow_list = arcade.SpriteList()
+        self.arrow_list = tilemap.sprite_lists.get("Arrow", arcade.SpriteList())
+        for arrow in self.arrow_list:
+            arrow.properties = {"damage": True, "damage_amount": 1}
 
-        if "Small Health Flasks" in tilemap.sprite_lists:
-            self.flask_list = tilemap.sprite_lists["Small Health Flasks"]
-            self.scene.add_sprite_list("Small Health Flasks", sprite_list=self.flask_list)
-        else:
-            self.flask_list = arcade.SpriteList()
-        
-        if "Small Speed Flasks" in tilemap.sprite_lists:
-            self.speed_flask_list = tilemap.sprite_lists["Small Speed Flasks"]
-            self.scene.add_sprite_list("Small Speed Flasks", sprite_list=self.speed_flask_list)
-        else:
-            self.speed_flask_list = arcade.SpriteList()
+        self.slow_list = tilemap.sprite_lists.get("Slow Speed Items", arcade.SpriteList())
+        self.flask_list = tilemap.sprite_lists.get("Small Health Flasks", arcade.SpriteList())
+        self.speed_flask_list = tilemap.sprite_lists.get("Small Speed Flasks", arcade.SpriteList())
+
 
 
 
@@ -462,12 +451,13 @@ class Game(arcade.Window):
         )
         self.camera = arcade.Camera2D()
 
+
     def draw_health_bar(self):
-    # Calculate positions - bottom left corner of the health bar
+        # Bar position
         bar_left = self.player.center_x - HEALTHBAR_WIDTH / 2
         bar_bottom = self.player.center_y + HEALTHBAR_OFFSET_Y - HEALTHBAR_HEIGHT / 2
-        
-        # Draw background of health bar (empty)
+
+        # Red background bar
         arcade.draw_lbwh_rectangle_filled(
             bar_left,
             bar_bottom,
@@ -475,11 +465,9 @@ class Game(arcade.Window):
             HEALTHBAR_HEIGHT,
             arcade.color.RED
         )
-        
-        # Calculate width based on health
+
+        # Green health portion
         health_width = HEALTHBAR_WIDTH * (1 - self.player.hurt_count / self.player.max_hits_before_death)
-        
-        # Draw filled part of health bar
         arcade.draw_lbwh_rectangle_filled(
             bar_left,
             bar_bottom,
@@ -487,19 +475,12 @@ class Game(arcade.Window):
             HEALTHBAR_HEIGHT,
             arcade.color.GREEN
         )
-        
-        # Draw health number
-        health_text = f"{self.player.max_hits_before_death - self.player.hurt_count}/{self.player.max_hits_before_death}"
-        arcade.draw_text(
-            health_text,
-            self.player.center_x,
-            self.player.center_y + HEALTHBAR_OFFSET_Y,
-            arcade.color.WHITE,
-            12,
-            align="center",
-            anchor_x="center",
-            anchor_y="center"
-        )
+
+        # Update and draw text
+        self.health_label.text = f"{self.player.max_hits_before_death - self.player.hurt_count}/{self.player.max_hits_before_death}"
+        self.health_label.x = self.player.center_x
+        self.health_label.y = self.player.center_y + HEALTHBAR_OFFSET_Y
+        self.health_label.draw()
 
     def on_draw(self):
         self.clear()
@@ -513,16 +494,21 @@ class Game(arcade.Window):
             self.player.change_x = 0
             self.player.change_y = 0
         else:
-            # Reset movement if not dashing or hurt
             if not self.player.is_dashing and not self.player.is_healing and not self.player.is_hurt:
                 self.player.change_x = 0
                 self.player.change_y = 0
 
-                current_speed = PLAYER_SPEED
+                if self.player.is_speed_boosted:
+                    current_speed = 7.0
+                    self.player.dash_speed = 15.0
+                else:
+                    current_speed = PLAYER_SPEED
+                    self.player.dash_speed = 10.0
+
                 if arcade.check_for_collision_with_list(self.player, self.slow_list):
                     current_speed *= 0.5
 
-                if self.player.current_attack == 0:  # Only move when not attacking
+                if self.player.current_attack == 0:
                     if arcade.key.W in self.held_keys or arcade.key.UP in self.held_keys:
                         self.player.change_y = current_speed
                     if arcade.key.S in self.held_keys or arcade.key.DOWN in self.held_keys:
@@ -535,6 +521,7 @@ class Game(arcade.Window):
         self.physics_engine.update()
         self.scene.update_animation(delta_time)
         self.player.character_animation(delta_time)
+        self.player.update_speed_boost()
         self.camera.position = self.player.position
 
         current_time = time.time()
@@ -564,7 +551,7 @@ class Game(arcade.Window):
                     self.peak_phase_start_time = current_time
                     self.on_update(0)
 
-        # ---------- Arrow Damage Phase Handling ----------
+
         if not self.player.is_dead:
             if self.arrow_damage_phase == "short":
                 if current_time - self.arrow_phase_start_time <= 0.1:
@@ -619,9 +606,14 @@ class Game(arcade.Window):
                 speed_flasks_nearby = arcade.check_for_collision_with_list(self.player, self.speed_flask_list)
                 if speed_flasks_nearby:
                     self.player.apply_speed_boost()
+                    # Trigger heal animation
+                    self.player.is_healing = True
+                    self.player.heal_start_time = time.time()
+                    self.player.heal_cooldown = self.player.heal_cooldown_time
+                    self.player.change_x = 0
+                    self.player.change_y = 0
                     for flask in speed_flasks_nearby:
                         flask.remove_from_sprite_lists()
-
 
 
     def on_key_release(self, key, modifiers):
