@@ -6,7 +6,7 @@ import time
 SCREEN_WIDTH = 1440
 SCREEN_HEIGHT = 720
 SCREEN_TITLE = "Dead Knight"
-PLAYER_SPEED = 3.7
+PLAYER_SPEED = 4
 TILE_SCALING = 1.5
 CHARACTER_SCALING = 2
 UPDATES_PER_FRAME = 5
@@ -39,7 +39,7 @@ class PlayerCharacter(arcade.Sprite):
         self.is_dashing = False
         self.dash_cooldown = 0
         self.dash_duration = 0.2
-        self.dash_speed = 10
+        self.dash_speed = 11
         self.dash_cooldown_time = 0.5
         self.dash_start_time = 0
         self.original_speed = PLAYER_SPEED
@@ -368,7 +368,7 @@ class PlayerCharacter(arcade.Sprite):
     def update_speed_boost(self):
         if self.is_speed_boosted:
             elapsed = time.time() - self.speed_boost_start_time
-            if elapsed >= 3.0:
+            if elapsed >= 4.0:
                 self.is_speed_boosted = False
 
 class Game(arcade.Window):
@@ -400,6 +400,13 @@ class Game(arcade.Window):
             "", 0, 0, arcade.color.WHITE, 12,
             anchor_x="center", anchor_y="center"
         )
+        self.keys_collected = 0
+
+        self.key_label = arcade.Text(
+            "", 0, 0, arcade.color.GOLD, 12,
+            anchor_x="center", anchor_y="center"
+        )
+
 
 
     def setup(self):
@@ -415,7 +422,8 @@ class Game(arcade.Window):
                 "Arrow": {},
                 "Slow Speed Items": {},
                 "Small Health Flasks": {},
-                "Small Speed Flasks": {}
+                "Small Speed Flasks": {},
+                "Keys": {}
             }
         )
 
@@ -432,8 +440,8 @@ class Game(arcade.Window):
         self.slow_list = tilemap.sprite_lists.get("Slow Speed Items", arcade.SpriteList())
         self.flask_list = tilemap.sprite_lists.get("Small Health Flasks", arcade.SpriteList())
         self.speed_flask_list = tilemap.sprite_lists.get("Small Speed Flasks", arcade.SpriteList())
-
-
+        self.keys_list = tilemap.sprite_lists.get("Keys", arcade.SpriteList())
+        self.total_keys = len(self.keys_list)
 
 
         self.player = PlayerCharacter()
@@ -481,12 +489,20 @@ class Game(arcade.Window):
         self.health_label.x = self.player.center_x
         self.health_label.y = self.player.center_y + HEALTHBAR_OFFSET_Y
         self.health_label.draw()
+    
+    def draw_key_count(self):
+        self.key_label.text = f"Keys: {self.keys_collected}/{self.total_keys}"
+        self.key_label.x = self.player.center_x
+        self.key_label.y = self.player.center_y + HEALTHBAR_OFFSET_Y + 20  # Slightly above the health bar
+        self.key_label.draw()
+
 
     def on_draw(self):
         self.clear()
         self.camera.use()
         self.scene.draw()
         self.draw_health_bar()
+        self.draw_key_count()
 
     def on_update(self, delta_time):
     # Don't process movement if dead
@@ -499,7 +515,7 @@ class Game(arcade.Window):
                 self.player.change_y = 0
 
                 if self.player.is_speed_boosted:
-                    current_speed = 7.0
+                    current_speed = 8.0
                     self.player.dash_speed = 15.0
                 else:
                     current_speed = PLAYER_SPEED
@@ -614,6 +630,13 @@ class Game(arcade.Window):
                     self.player.change_y = 0
                     for flask in speed_flasks_nearby:
                         flask.remove_from_sprite_lists()
+
+            if self.keys_list:
+                keys_nearby = arcade.check_for_collision_with_list(self.player, self.keys_list)
+                for key_sprite in keys_nearby:
+                    key_sprite.remove_from_sprite_lists()
+                    self.keys_collected += 1
+
 
 
     def on_key_release(self, key, modifiers):
