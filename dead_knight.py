@@ -57,7 +57,6 @@ class PlayerCharacter(arcade.Sprite):
 
         self.heal_amount = 1
         self.heal_cooldown = 0
-        self.heal_cooldown_time = 1.0
         self.is_healing = False
         self.heal_start_time = 0
         self.heal_duration = 0.5
@@ -283,7 +282,6 @@ class PlayerCharacter(arcade.Sprite):
             
             self.is_healing = True
             self.heal_start_time = time.time()
-            self.heal_cooldown = self.heal_cooldown_time
             self.hurt_count = max(0, self.hurt_count - self.heal_amount)
             self.change_x = 0
             self.change_y = 0
@@ -308,7 +306,10 @@ class PlayerCharacter(arcade.Sprite):
             self.dash_cooldown = self.dash_cooldown_time
             self.cur_texture = 0
             self.dash_start_time = time.time()
-            
+
+            self.is_hurt = False
+            self.cur_texture = 0
+
             if self.facing_direction == DIRECTION_RIGHT:
                 self.change_x = self.dash_speed
                 self.change_y = 0
@@ -321,6 +322,30 @@ class PlayerCharacter(arcade.Sprite):
             elif self.facing_direction == DIRECTION_DOWN:
                 self.change_x = 0
                 self.change_y = -self.dash_speed
+    
+    def dash(self):
+        if not self.is_dead and not self.is_dashing and self.dash_cooldown <= 0 and self.current_attack == 0:
+            self.is_dashing = True
+            self.dash_cooldown = self.dash_cooldown_time
+            self.cur_texture = 0
+            self.dash_start_time = time.time()
+
+            self.is_hurt = False
+            self.cur_texture = 0
+
+            if self.facing_direction == DIRECTION_RIGHT:
+                self.change_x = self.dash_speed
+                self.change_y = 0
+            elif self.facing_direction == DIRECTION_LEFT:
+                self.change_x = -self.dash_speed
+                self.change_y = 0
+            elif self.facing_direction == DIRECTION_UP:
+                self.change_x = 0
+                self.change_y = self.dash_speed
+            elif self.facing_direction == DIRECTION_DOWN:
+                self.change_x = 0
+                self.change_y = -self.dash_speed
+
 
     def hurt(self, damage_amount=1):
         current_time = time.time()
@@ -415,8 +440,10 @@ class Game(arcade.Window):
             map_path,
             scaling=TILE_SCALING,
             layer_options={
+                "Foreground Fake Walls":{},
                 "Walls": {"use_spatial_hash": True},
                 "Collision Items": {"use_spatial_hash": True},
+                "Boundary Walls": {"use_spatial_hash": True},
                 "Non Collision Items": {},
                 "Peaks": {},
                 "Arrow": {},
@@ -428,7 +455,13 @@ class Game(arcade.Window):
         )
 
         self.scene = arcade.Scene.from_tilemap(tilemap)
-        
+
+        # Move "Foreground Fake Walls" to the top rendering layer
+        foreground_layer = self.scene["Foreground Fake Walls"]
+        self.scene.remove_sprite_list_by_name("Foreground Fake Walls")
+        self.scene.add_sprite_list("Foreground Fake Walls", sprite_list=foreground_layer)
+
+
         self.peak_list = tilemap.sprite_lists.get("Peaks", arcade.SpriteList())
         for peak in self.peak_list:
             peak.properties = {"damage": True, "damage_amount": 1}
@@ -452,6 +485,7 @@ class Game(arcade.Window):
         walls_and_collision_items = arcade.SpriteList()
         walls_and_collision_items.extend(self.scene["Walls"])
         walls_and_collision_items.extend(self.scene["Collision Items"])
+        walls_and_collision_items.extend(self.scene["Boundary Walls"])
 
         self.physics_engine = arcade.PhysicsEngineSimple(
             self.player, 
@@ -608,8 +642,6 @@ class Game(arcade.Window):
             self.player.attack()
         elif key == arcade.key.LSHIFT:
             self.player.dash()
-        elif key == arcade.key.F:
-            self.player.hurt()
         elif key == arcade.key.E:
             if self.flask_list:
                 flasks_nearby = arcade.check_for_collision_with_list(self.player, self.flask_list)
@@ -625,7 +657,6 @@ class Game(arcade.Window):
                     # Trigger heal animation
                     self.player.is_healing = True
                     self.player.heal_start_time = time.time()
-                    self.player.heal_cooldown = self.player.heal_cooldown_time
                     self.player.change_x = 0
                     self.player.change_y = 0
                     for flask in speed_flasks_nearby:
