@@ -66,7 +66,6 @@ class PlayerCharacter(arcade.Sprite):
         self.speed_boost_duration = 17.0
         self.speed_multiplier = 1.5
 
-
         dir_name = os.path.dirname(os.path.abspath(__file__))
         character_path = os.path.join(dir_name, "knight_character", "knight")
 
@@ -152,7 +151,6 @@ class PlayerCharacter(arcade.Sprite):
             self.death_textures[DIRECTION_DOWN].append(arcade.load_texture(f"{character_path}_down_death{i}.png"))
 
         for i in range(4):
-            # Hurt and death animations (assuming same 7 frames)
             self.hurt_textures[DIRECTION_RIGHT].append(arcade.load_texture(f"{character_path}_right_hurt{i}.png"))
             self.hurt_textures[DIRECTION_LEFT].append(arcade.load_texture(f"{character_path}_left_hurt{i}.png"))
             self.hurt_textures[DIRECTION_UP].append(arcade.load_texture(f"{character_path}_up_hurt{i}.png"))
@@ -166,15 +164,13 @@ class PlayerCharacter(arcade.Sprite):
                 self.death_start_time = time.time()
                 
             elapsed = time.time() - self.death_start_time
-            death_duration = 1.0  # 1 second for full death animation
+            death_duration = 1.0
             death_frames = len(self.death_textures[self.facing_direction])
             
-            # Calculate current frame
             if elapsed < death_duration:
                 frame = min(int(elapsed / death_duration * death_frames), death_frames - 1)
                 self.texture = self.death_textures[self.facing_direction][frame]
             else:
-                # After animation completes, stay on last frame
                 frame = death_frames - 1
                 self.texture = self.death_textures[self.facing_direction][frame]
             return
@@ -193,7 +189,6 @@ class PlayerCharacter(arcade.Sprite):
                 self.texture = self.heal_textures[self.facing_direction][frame]
             return
             
-        # Hurt animation comes next
         if self.is_hurt:
             elapsed = time.time() - self.hurt_start_time
             if elapsed >= self.hurt_duration:
@@ -205,7 +200,6 @@ class PlayerCharacter(arcade.Sprite):
                 self.texture = self.hurt_textures[self.facing_direction][frame]
             return
 
-        # Update direction based on movement
         if self.change_y > 0:
             self.direction = DIRECTION_UP
             self.facing_direction = DIRECTION_UP
@@ -219,11 +213,9 @@ class PlayerCharacter(arcade.Sprite):
             self.direction = DIRECTION_RIGHT
             self.facing_direction = DIRECTION_RIGHT
 
-        # Handle dash cooldown
         if self.dash_cooldown > 0:
             self.dash_cooldown -= delta_time
 
-        # Dash animation and movement
         if self.is_dashing:
             self.cur_texture += 1
             dash_frames = len(self.dash_textures[self.facing_direction]) * UPDATES_PER_FRAME
@@ -239,11 +231,9 @@ class PlayerCharacter(arcade.Sprite):
                 self.texture = self.dash_textures[self.facing_direction][frame]
             return
 
-        # Handle attack cooldown
         if self.attack_cooldown > 0:
             self.attack_cooldown -= delta_time
 
-        # Attack animation logic
         if self.current_attack > 0:
             self.cur_texture += 1
             
@@ -262,7 +252,6 @@ class PlayerCharacter(arcade.Sprite):
                 self.can_combo = True
             return
 
-        # Movement animations
         self.cur_texture += 1
         if self.change_x == 0 and self.change_y == 0:
             if self.cur_texture >= 7 * UPDATES_PER_FRAME:
@@ -322,30 +311,6 @@ class PlayerCharacter(arcade.Sprite):
             elif self.facing_direction == DIRECTION_DOWN:
                 self.change_x = 0
                 self.change_y = -self.dash_speed
-    
-    def dash(self):
-        if not self.is_dead and not self.is_dashing and self.dash_cooldown <= 0 and self.current_attack == 0:
-            self.is_dashing = True
-            self.dash_cooldown = self.dash_cooldown_time
-            self.cur_texture = 0
-            self.dash_start_time = time.time()
-
-            self.is_hurt = False
-            self.cur_texture = 0
-
-            if self.facing_direction == DIRECTION_RIGHT:
-                self.change_x = self.dash_speed
-                self.change_y = 0
-            elif self.facing_direction == DIRECTION_LEFT:
-                self.change_x = -self.dash_speed
-                self.change_y = 0
-            elif self.facing_direction == DIRECTION_UP:
-                self.change_x = 0
-                self.change_y = self.dash_speed
-            elif self.facing_direction == DIRECTION_DOWN:
-                self.change_x = 0
-                self.change_y = -self.dash_speed
-
 
     def hurt(self, damage_amount=1):
         current_time = time.time()
@@ -362,7 +327,6 @@ class PlayerCharacter(arcade.Sprite):
             self.change_x = 0
             self.change_y = 0
             
-            # Knockback effect
             if self.facing_direction == DIRECTION_RIGHT:
                 self.center_x -= 20
             elif self.facing_direction == DIRECTION_LEFT:
@@ -432,15 +396,13 @@ class Game(arcade.Window):
             anchor_x="center", anchor_y="center"
         )
 
-
-
     def setup(self):
         map_path = os.path.join(os.path.dirname(__file__), "Level_01.tmx")
         tilemap = arcade.load_tilemap(
             map_path,
             scaling=TILE_SCALING,
             layer_options={
-                "Foreground Fake Walls":{},
+                "Foreground Fake Walls": {},
                 "Walls": {"use_spatial_hash": True},
                 "Collision Items": {"use_spatial_hash": True},
                 "Boundary Walls": {"use_spatial_hash": True},
@@ -450,18 +412,28 @@ class Game(arcade.Window):
                 "Slow Speed Items": {},
                 "Small Health Flasks": {},
                 "Small Speed Flasks": {},
-                "Keys": {}
+                "Keys": {},
+                "Walls On Top of Boundary": {}
             }
         )
 
+        # Initialize the scene
         self.scene = arcade.Scene.from_tilemap(tilemap)
-
-        # Move "Foreground Fake Walls" to the top rendering layer
-        foreground_layer = self.scene["Foreground Fake Walls"]
+        
+        # Store the foreground layers before removing them
+        foreground_fake_walls = self.scene["Foreground Fake Walls"]
+        walls_on_top = self.scene["Walls On Top of Boundary"]
+        
+        # Create separate sprite list for foreground layers
+        self.foreground_layers = arcade.SpriteList()
+        self.foreground_layers.extend(foreground_fake_walls)
+        self.foreground_layers.extend(walls_on_top)
+        
+        # Remove the foreground layers from the scene so they don't get drawn twice
         self.scene.remove_sprite_list_by_name("Foreground Fake Walls")
-        self.scene.add_sprite_list("Foreground Fake Walls", sprite_list=foreground_layer)
+        self.scene.remove_sprite_list_by_name("Walls On Top of Boundary")
 
-
+        # Initialize other game elements
         self.peak_list = tilemap.sprite_lists.get("Peaks", arcade.SpriteList())
         for peak in self.peak_list:
             peak.properties = {"damage": True, "damage_amount": 1}
@@ -476,12 +448,13 @@ class Game(arcade.Window):
         self.keys_list = tilemap.sprite_lists.get("Keys", arcade.SpriteList())
         self.total_keys = len(self.keys_list)
 
-
+        # Create player
         self.player = PlayerCharacter()
         self.player.center_x = 1700
         self.player.center_y = 350
         self.scene.add_sprite("Player", self.player)
 
+        # Set up physics
         walls_and_collision_items = arcade.SpriteList()
         walls_and_collision_items.extend(self.scene["Walls"])
         walls_and_collision_items.extend(self.scene["Collision Items"])
@@ -491,15 +464,14 @@ class Game(arcade.Window):
             self.player, 
             walls_and_collision_items
         )
+        
+        # Initialize camera
         self.camera = arcade.Camera2D()
 
-
     def draw_health_bar(self):
-        # Bar position
         bar_left = self.player.center_x - HEALTHBAR_WIDTH / 2
         bar_bottom = self.player.center_y + HEALTHBAR_OFFSET_Y - HEALTHBAR_HEIGHT / 2
 
-        # Red background bar
         arcade.draw_lbwh_rectangle_filled(
             bar_left,
             bar_bottom,
@@ -508,7 +480,6 @@ class Game(arcade.Window):
             arcade.color.RED
         )
 
-        # Green health portion
         health_width = HEALTHBAR_WIDTH * (1 - self.player.hurt_count / self.player.max_hits_before_death)
         arcade.draw_lbwh_rectangle_filled(
             bar_left,
@@ -518,7 +489,6 @@ class Game(arcade.Window):
             arcade.color.GREEN
         )
 
-        # Update and draw text
         self.health_label.text = f"{self.player.max_hits_before_death - self.player.hurt_count}/{self.player.max_hits_before_death}"
         self.health_label.x = self.player.center_x
         self.health_label.y = self.player.center_y + HEALTHBAR_OFFSET_Y
@@ -527,19 +497,19 @@ class Game(arcade.Window):
     def draw_key_count(self):
         self.key_label.text = f"Keys: {self.keys_collected}/{self.total_keys}"
         self.key_label.x = self.player.center_x
-        self.key_label.y = self.player.center_y + HEALTHBAR_OFFSET_Y + 20  # Slightly above the health bar
+        self.key_label.y = self.player.center_y + HEALTHBAR_OFFSET_Y + 20
         self.key_label.draw()
-
 
     def on_draw(self):
         self.clear()
         self.camera.use()
         self.scene.draw()
+        self.foreground_layers.draw()
         self.draw_health_bar()
         self.draw_key_count()
 
     def on_update(self, delta_time):
-    # Don't process movement if dead
+        # Don't process movement if dead
         if self.player.is_dead:
             self.player.change_x = 0
             self.player.change_y = 0
@@ -572,68 +542,84 @@ class Game(arcade.Window):
         self.scene.update_animation(delta_time)
         self.player.character_animation(delta_time)
         self.player.update_speed_boost()
-        self.camera.position = self.player.position
-
+        
         current_time = time.time()
-
+        
+        # ----- PEAK DAMAGE SYSTEM (6.4s cycle) -----
         if not self.player.is_dead:
+            elapsed = current_time - self.peak_phase_start_time
+            
             if self.peak_damage_phase == "wait":
-                if current_time - self.peak_phase_start_time >= 4.2:
+                if elapsed >= 4.0:
+                    self.peak_damage_phase = "cooldown1"
+                    self.peak_phase_start_time = current_time
+                    for peak in self.peak_list:
+                        peak.visible = True
+            
+            elif self.peak_damage_phase == "cooldown1":
+                if elapsed >= 0.2:
                     self.peak_damage_phase = "active"
                     self.peak_phase_start_time = current_time
-                    self.on_update(0)
-
+            
             elif self.peak_damage_phase == "active":
-                if current_time - self.peak_phase_start_time <= 2.0:
+                if elapsed <= 2.0:
                     peaks_hit = arcade.check_for_collision_with_list(self.player, self.peak_list)
-                    if peaks_hit:
+                    if peaks_hit and not self.player.invincible:
                         self.player.hurt()
                         self.flash_red = True
                         self.flash_end_time = current_time + 0.2
                 else:
-                    self.peak_damage_phase = "cooldown"
+                    self.peak_damage_phase = "cooldown2"
                     self.peak_phase_start_time = current_time
-                    self.on_update(0)
-
-            elif self.peak_damage_phase == "cooldown":
-                if current_time - self.peak_phase_start_time >= 0.2:
+                    for peak in self.peak_list:
+                        peak.visible = False
+            
+            elif self.peak_damage_phase == "cooldown2":
+                if elapsed >= 0.2:
                     self.peak_damage_phase = "wait"
                     self.peak_phase_start_time = current_time
-                    self.on_update(0)
 
-
+        # ----- ARROW DAMAGE SYSTEM -----
         if not self.player.is_dead:
+            arrow_elapsed = current_time - self.arrow_phase_start_time
+            
             if self.arrow_damage_phase == "short":
-                if current_time - self.arrow_phase_start_time <= 0.1:
+                if arrow_elapsed <= 0.1:
                     arrows_hit = arcade.check_for_collision_with_list(self.player, self.arrow_list)
-                    if arrows_hit:
+                    if arrows_hit and not self.player.invincible:
                         self.player.hurt()
                         self.flash_red = True
-                        self.flash_end_time = current_time
+                        self.flash_end_time = current_time + 0.2
                 else:
                     self.arrow_damage_phase = "wait"
                     self.arrow_phase_start_time = current_time
-                    self.next_arrow_phase = "long"
-                    self.on_update(0)
-
+            
+            elif self.arrow_damage_phase == "wait":
+                if arrow_elapsed >= 2.0:
+                    self.arrow_damage_phase = "long"
+                    self.arrow_phase_start_time = current_time
+            
             elif self.arrow_damage_phase == "long":
-                if current_time - self.arrow_phase_start_time <= 0.25:
+                if arrow_elapsed <= 0.25:
                     arrows_hit = arcade.check_for_collision_with_list(self.player, self.arrow_list)
-                    if arrows_hit:
+                    if arrows_hit and not self.player.invincible:
                         self.player.hurt()
                         self.flash_red = True
-                        self.flash_end_time = current_time
+                        self.flash_end_time = current_time + 0.2
                 else:
                     self.arrow_damage_phase = "short"
                     self.arrow_phase_start_time = current_time
-                    self.on_update(0)
 
-            elif self.arrow_damage_phase == "wait":
-                if current_time - self.arrow_phase_start_time >= 2.0:
-                    self.arrow_damage_phase = self.next_arrow_phase
-                    self.arrow_phase_start_time = current_time
-                    self.on_update(0)
+        # ----- AUTOMATIC KEY COLLECTION -----
+        if not self.player.is_dead and self.keys_list:
+            keys_collected = arcade.check_for_collision_with_list(self.player, self.keys_list)
+            for key_sprite in keys_collected:
+                key_sprite.remove_from_sprite_lists()
+                self.keys_collected += 1
+                self.flash_red = True
+                self.flash_end_time = current_time + 0.2
 
+        # ----- CAMERA FOLLOWS PLAYER -----
         self.camera.position = self.player.position
 
     def on_key_press(self, key, modifiers):
@@ -654,21 +640,12 @@ class Game(arcade.Window):
                 speed_flasks_nearby = arcade.check_for_collision_with_list(self.player, self.speed_flask_list)
                 if speed_flasks_nearby:
                     self.player.apply_speed_boost()
-                    # Trigger heal animation
                     self.player.is_healing = True
                     self.player.heal_start_time = time.time()
                     self.player.change_x = 0
                     self.player.change_y = 0
                     for flask in speed_flasks_nearby:
                         flask.remove_from_sprite_lists()
-
-            if self.keys_list:
-                keys_nearby = arcade.check_for_collision_with_list(self.player, self.keys_list)
-                for key_sprite in keys_nearby:
-                    key_sprite.remove_from_sprite_lists()
-                    self.keys_collected += 1
-
-
 
     def on_key_release(self, key, modifiers):
         self.held_keys.discard(key)
