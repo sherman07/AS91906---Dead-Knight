@@ -396,6 +396,10 @@ class Game(arcade.Window):
             anchor_x="center", anchor_y="center"
         )
 
+        self.heal_sound = arcade.Sound("music_and_sound/heal.wav")
+        self.key_sound = arcade.Sound("music_and_sound/key.wav")
+        self.speed_sound = arcade.Sound("music_and_sound/speed.wav")
+
     def setup(self):
         map_path = os.path.join(os.path.dirname(__file__), "Level_01.tmx")
         tilemap = arcade.load_tilemap(
@@ -618,6 +622,7 @@ class Game(arcade.Window):
                 self.keys_collected += 1
                 self.flash_red = True
                 self.flash_end_time = current_time + 0.2
+                self.key_sound.play()
 
         # ----- CAMERA FOLLOWS PLAYER -----
         self.camera.position = self.player.position
@@ -633,6 +638,7 @@ class Game(arcade.Window):
                 flasks_nearby = arcade.check_for_collision_with_list(self.player, self.flask_list)
                 if flasks_nearby:
                     self.player.heal()
+                    self.heal_sound.play()  # Play heal sound
                     for flask in flasks_nearby:
                         flask.remove_from_sprite_lists()
 
@@ -644,6 +650,7 @@ class Game(arcade.Window):
                     self.player.heal_start_time = time.time()
                     self.player.change_x = 0
                     self.player.change_y = 0
+                    self.speed_sound.play()
                     for flask in speed_flasks_nearby:
                         flask.remove_from_sprite_lists()
             
