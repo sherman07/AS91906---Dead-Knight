@@ -380,7 +380,7 @@ class Game(arcade.Window):
         self.peak_damage_phase = "wait"
         self.peak_phase_start_time = time.time()
 
-        self.arrow_damage_phase = "short"
+        self.arrow_damage_phase = "wait"  # <-- Fix here
         self.arrow_phase_start_time = time.time()
         self.next_arrow_phase = "long"
 
@@ -413,7 +413,8 @@ class Game(arcade.Window):
                 "Small Health Flasks": {},
                 "Small Speed Flasks": {},
                 "Keys": {},
-                "Walls On Top of Boundary": {}
+                "Walls On Top of Boundary": {},
+                "Tunnel Door": {}
             }
         )
 
@@ -545,24 +546,23 @@ class Game(arcade.Window):
         
         current_time = time.time()
         
-        # ----- PEAK DAMAGE SYSTEM (6.4s cycle) -----
         if not self.player.is_dead:
-            elapsed = current_time - self.peak_phase_start_time
-            
+            peak_elapsed = current_time - self.peak_phase_start_time
+
             if self.peak_damage_phase == "wait":
-                if elapsed >= 4.0:
+                if peak_elapsed >= 4.0:
                     self.peak_damage_phase = "cooldown1"
-                    self.peak_phase_start_time = current_time
+                    self.peak_phase_start_time += 4.0  # increment by phase duration
                     for peak in self.peak_list:
                         peak.visible = True
-            
+
             elif self.peak_damage_phase == "cooldown1":
-                if elapsed >= 0.2:
+                if peak_elapsed >= 0.2:
                     self.peak_damage_phase = "active"
-                    self.peak_phase_start_time = current_time
-            
+                    self.peak_phase_start_time += 0.2  # increment by phase duration
+
             elif self.peak_damage_phase == "active":
-                if elapsed <= 2.0:
+                if peak_elapsed <= 2.0:
                     peaks_hit = arcade.check_for_collision_with_list(self.player, self.peak_list)
                     if peaks_hit and not self.player.invincible:
                         self.player.hurt()
@@ -570,47 +570,47 @@ class Game(arcade.Window):
                         self.flash_end_time = current_time + 0.2
                 else:
                     self.peak_damage_phase = "cooldown2"
-                    self.peak_phase_start_time = current_time
+                    self.peak_phase_start_time += 2.0  # increment by phase duration
                     for peak in self.peak_list:
                         peak.visible = False
-            
+
             elif self.peak_damage_phase == "cooldown2":
-                if elapsed >= 0.2:
+                if peak_elapsed >= 0.2:
                     self.peak_damage_phase = "wait"
-                    self.peak_phase_start_time = current_time
+                    self.peak_phase_start_time += 0.2  # increment by phase duration
 
         # ----- ARROW DAMAGE SYSTEM -----
         if not self.player.is_dead:
             arrow_elapsed = current_time - self.arrow_phase_start_time
-            
-            if self.arrow_damage_phase == "short":
+
+            if self.arrow_damage_phase == "hurt1":
                 if arrow_elapsed <= 0.1:
                     arrows_hit = arcade.check_for_collision_with_list(self.player, self.arrow_list)
                     if arrows_hit and not self.player.invincible:
                         self.player.hurt()
                         self.flash_red = True
-                        self.flash_end_time = current_time + 0.2
+                        self.flash_end_time = current_time
                 else:
                     self.arrow_damage_phase = "wait"
-                    self.arrow_phase_start_time = current_time
-            
+                    self.arrow_phase_start_time += 0.1
+
             elif self.arrow_damage_phase == "wait":
                 if arrow_elapsed >= 2.0:
-                    self.arrow_damage_phase = "long"
-                    self.arrow_phase_start_time = current_time
-            
-            elif self.arrow_damage_phase == "long":
-                if arrow_elapsed <= 0.25:
+                    self.arrow_damage_phase = "hurt2"
+                    self.arrow_phase_start_time += 2.0
+
+            elif self.arrow_damage_phase == "hurt2":
+                if arrow_elapsed <= 0.3:
                     arrows_hit = arcade.check_for_collision_with_list(self.player, self.arrow_list)
                     if arrows_hit and not self.player.invincible:
                         self.player.hurt()
                         self.flash_red = True
-                        self.flash_end_time = current_time + 0.2
+                        self.flash_end_time = current_time
                 else:
-                    self.arrow_damage_phase = "short"
-                    self.arrow_phase_start_time = current_time
+                    self.arrow_damage_phase = "hurt1"
+                    self.arrow_phase_start_time += 0.3
 
-        # ----- AUTOMATIC KEY COLLECTION -----
+
         if not self.player.is_dead and self.keys_list:
             keys_collected = arcade.check_for_collision_with_list(self.player, self.keys_list)
             for key_sprite in keys_collected:
@@ -626,7 +626,7 @@ class Game(arcade.Window):
         self.held_keys.add(key)
         if key == arcade.key.SPACE:
             self.player.attack()
-        elif key == arcade.key.LSHIFT:
+        elif key == arcade.key.LSHIFT or key == arcade.key.RSHIFT:
             self.player.dash()
         elif key == arcade.key.E:
             if self.flask_list:
@@ -646,6 +646,10 @@ class Game(arcade.Window):
                     self.player.change_y = 0
                     for flask in speed_flasks_nearby:
                         flask.remove_from_sprite_lists()
+            
+            if self.keys_collected >= 6:
+                if "Tunnel Door" in self.scene.sprite_lists:
+                    self.scene.remove_sprite_list_by_name("Tunnel Door")
 
     def on_key_release(self, key, modifiers):
         self.held_keys.discard(key)
