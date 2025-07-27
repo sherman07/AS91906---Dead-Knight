@@ -386,15 +386,21 @@ class Game(arcade.Window):
         self.flash_red = False
         self.flash_end_time = 0
         self.flask_list = None
+        self.tunnel_door_list = None
+        self.current_level = 1
 
         self.peak_damage_interval = 4
         self.last_peak_damage_time = time.time()
         self.peak_damage_phase = "wait"
         self.peak_phase_start_time = time.time()
 
-        self.arrow_damage_phase = "wait"  # <-- Fix here
+        self.arrow_damage_phase = "wait"
         self.arrow_phase_start_time = time.time()
         self.next_arrow_phase = "long"
+
+        self.flamethrower_damage_phase = "wait"
+        self.flamethrower_phase_start_time = time.time()
+        self.next_flamethrower_phase = "short"
 
         self.enemy_list = None
 
@@ -418,30 +424,63 @@ class Game(arcade.Window):
         self.hurt_arrow = arcade.Sound("music_and_sound/hurt_arrow.mp3")
         self.peak = arcade.Sound("music_and_sound/peak.mp3")
         self.arrow = arcade.Sound("music_and_sound/arrow.mp3")
-        self.background_music = arcade.Sound("music_and_sound/background_ music.mp3")
+        self.background_music = arcade.Sound("music_and_sound/background_music.mp3")
         self.background_music_player = None
+        self.level_complete = arcade.Sound("music_and_sound/level_complete.wav")
 
     def setup(self):
-        map_path = os.path.join(os.path.dirname(__file__), "Level_01.tmx")
-        tilemap = arcade.load_tilemap(
-            map_path,
-            scaling=TILE_SCALING,
-            layer_options={
-                "Foreground Fake Walls": {},
-                "Walls": {"use_spatial_hash": True},
-                "Collision Items": {"use_spatial_hash": True},
-                "Boundary Walls": {"use_spatial_hash": True},
-                "Non Collision Items": {},
-                "Peaks": {},
-                "Arrow": {},
-                "Slow Speed Items": {},
-                "Small Health Flasks": {},
-                "Small Speed Flasks": {},
-                "Keys": {},
-                "Walls On Top of Boundary": {},
-                "Tunnel Door": {}
-            }
-        )
+        """Set up the game and initialize the variables."""
+        self.load_level(self.current_level)
+
+    def load_level(self, level_number):
+        """Load the specified level"""
+        map_path = os.path.join(os.path.dirname(__file__), f"Level_{level_number:02d}.tmx")
+        
+        try:
+            tilemap = arcade.load_tilemap(
+                map_path,
+                scaling=TILE_SCALING,
+                layer_options={
+                    "Foreground Fake Walls": {},
+                    "Walls": {"use_spatial_hash": True},
+                    "Collision Items": {"use_spatial_hash": True},
+                    "Boundary Walls": {"use_spatial_hash": True},
+                    "Non Collision Items": {},
+                    "Peaks": {},
+                    "Arrow": {},
+                    "Slow Speed Items": {},
+                    "Small Health Flasks": {},
+                    "Small Speed Flasks": {},
+                    "Keys": {},
+                    "Walls On Top of Boundary": {},
+                    "Tunnel Door": {},
+                    "Flamethrower": {}
+                }
+            )
+        except FileNotFoundError:
+            print(f"Level {level_number} not found! Loading level 1 instead.")
+            self.current_level = 1
+            map_path = os.path.join(os.path.dirname(__file__), "Level_01.tmx")
+            tilemap = arcade.load_tilemap(
+                map_path,
+                scaling=TILE_SCALING,
+                layer_options={
+                    "Foreground Fake Walls": {},
+                    "Walls": {"use_spatial_hash": True},
+                    "Collision Items": {"use_spatial_hash": True},
+                    "Boundary Walls": {"use_spatial_hash": True},
+                    "Non Collision Items": {},
+                    "Peaks": {},
+                    "Arrow": {},
+                    "Slow Speed Items": {},
+                    "Small Health Flasks": {},
+                    "Small Speed Flasks": {},
+                    "Keys": {},
+                    "Walls On Top of Boundary": {},
+                    "Tunnel Door": {},
+                    "Flamethrower": {}
+                }
+            )
 
         # Initialize the scene
         self.scene = arcade.Scene.from_tilemap(tilemap)
@@ -468,19 +507,44 @@ class Game(arcade.Window):
         for arrow in self.arrow_list:
             arrow.properties = {"damage": True, "damage_amount": 1}
 
+        # Flamethrower system
+        self.flamethrower_list = tilemap.sprite_lists.get("Flamethrower", arcade.SpriteList())
+        for flame in self.flamethrower_list:
+            flame.properties = {"damage": True, "damage_amount": 1}
+
         self.slow_list = tilemap.sprite_lists.get("Slow Speed Items", arcade.SpriteList())
         self.flask_list = tilemap.sprite_lists.get("Small Health Flasks", arcade.SpriteList())
         self.speed_flask_list = tilemap.sprite_lists.get("Small Speed Flasks", arcade.SpriteList())
         self.keys_list = tilemap.sprite_lists.get("Keys", arcade.SpriteList())
+        self.tunnel_door_list = tilemap.sprite_lists.get("Tunnel Door", arcade.SpriteList())
         self.total_keys = len(self.keys_list)
 
-        # Create player
-        self.player = PlayerCharacter()
-        self.player.center_x = 1700
-        self.player.center_y = 350
-        self.scene.add_sprite("Player", self.player)
-        self.player.dash_sound = self.dash  # Add this line
+        # Create player if it doesn't exist
+        if not hasattr(self, 'player') or self.player is None:
+            self.player = PlayerCharacter()
+            self.player.center_x = 1700
+            self.player.center_y = 350
+            self.player.dash_sound = self.dash
+        else:
+            # Reset player position based on level
+            if level_number == 1:
+                self.player.center_x = 1700
+                self.player.center_y = 350
+            elif level_number == 2:
+                self.player.center_x = 100
+                self.player.center_y = 100
+            
+            # Reset player state (but keep health and keys)
+            self.player.is_dead = False
+            self.player.is_hurt = False
+            self.player.is_dashing = False
+            self.player.current_attack = 0
+            self.player.cur_texture = 0
+            self.player.change_x = 0
+            self.player.change_y = 0
 
+        self.scene.add_sprite("Player", self.player)
+        
         # Set up physics
         walls_and_collision_items = arcade.SpriteList()
         walls_and_collision_items.extend(self.scene["Walls"])
@@ -495,6 +559,7 @@ class Game(arcade.Window):
         # Initialize camera
         self.camera = arcade.Camera2D()
 
+        # Play background music
         if self.background_music_player is not None:
             self.background_music_player.stop()
         self.background_music_player = self.background_music.play(loop=True)
@@ -520,6 +585,7 @@ class Game(arcade.Window):
             arcade.color.GREEN
         )
 
+        self.health_label.text = f"{self.player.max_hits_before_death - self.player.hurt_count}/{self.player.max_hits_before_death}"
         self.health_label.x = self.player.center_x
         self.health_label.y = self.player.center_y + HEALTHBAR_OFFSET_Y
         self.health_label.draw()
@@ -539,7 +605,7 @@ class Game(arcade.Window):
         self.draw_key_count()
 
     def on_update(self, delta_time):
-    # Don't process movement if dead
+        # Don't process movement if dead
         if self.player.is_dead:
             self.player.change_x = 0
             self.player.change_y = 0
@@ -579,9 +645,6 @@ class Game(arcade.Window):
         
         current_time = time.time()
 
-        for enemy in self.enemy_list:
-            enemy.update_animation(delta_time)
-        
         # ----- PEAK DAMAGE SYSTEM -----
         if not self.player.is_dead:
             peak_elapsed = current_time - self.peak_phase_start_time
@@ -623,35 +686,66 @@ class Game(arcade.Window):
         if not self.player.is_dead:
             arrow_elapsed = current_time - self.arrow_phase_start_time
 
-            if self.arrow_damage_phase == "hurt1":
-                if arrow_elapsed <= 0.1:
+            if self.arrow_damage_phase == "short":
+                if arrow_elapsed <= 0.1:  # Active for 0.1 seconds
                     arrows_hit = arcade.check_for_collision_with_list(self.player, self.arrow_list)
                     if arrows_hit and not self.player.invincible and not self.player.is_hurt:
-                        self.player.hurt()
-                        self.hurt_arrow.play()
-                        self.flash_red = True
-                        self.flash_end_time = current_time
+                        if self.player.hurt():  # This now returns True if damage was applied
+                            self.hurt_arrow.play()
+                            self.flash_red = True
+                            self.flash_end_time = current_time + 0.2
                 else:
                     self.arrow_damage_phase = "wait"
                     self.arrow_phase_start_time = current_time
 
             elif self.arrow_damage_phase == "wait":
-                if arrow_elapsed >= 2.0:
-                    self.arrow_damage_phase = "hurt2"
+                if arrow_elapsed >= 2.0:  # Wait for 2 seconds
+                    self.arrow_damage_phase = "long"
                     self.arrow_phase_start_time = current_time
                     self.arrow.play()
 
-            elif self.arrow_damage_phase == "hurt2":
-                if arrow_elapsed <= 0.3:
+            elif self.arrow_damage_phase == "long":
+                if arrow_elapsed <= 0.3:  # Active for 0.3 seconds
                     arrows_hit = arcade.check_for_collision_with_list(self.player, self.arrow_list)
                     if arrows_hit and not self.player.invincible and not self.player.is_hurt:
-                        self.player.hurt()
-                        self.hurt_arrow.play()
-                        self.flash_red = True
-                        self.flash_end_time = current_time
+                        if self.player.hurt():  # This now returns True if damage was applied
+                            self.hurt_arrow.play()
+                            self.flash_red = True
+                            self.flash_end_time = current_time + 0.2
                 else:
-                    self.arrow_damage_phase = "hurt1"
+                    self.arrow_damage_phase = "short"
                     self.arrow_phase_start_time = current_time
+                    
+        # ----- FLAMETHROWER DAMAGE SYSTEM -----
+        if not self.player.is_dead:
+            flamethrower_elapsed = current_time - self.flamethrower_phase_start_time
+
+            if self.flamethrower_damage_phase == "short":
+                if flamethrower_elapsed <= 0.15:  # Active for 0.15 seconds
+                    flames_hit = arcade.check_for_collision_with_list(self.player, self.flamethrower_list)
+                    if flames_hit and not self.player.invincible and not self.player.is_hurt:
+                        if self.player.hurt():
+                            self.flash_red = True
+                            self.flash_end_time = current_time + 0.2
+                else:
+                    self.flamethrower_damage_phase = "wait"
+                    self.flamethrower_phase_start_time = current_time
+
+            elif self.flamethrower_damage_phase == "wait":
+                if flamethrower_elapsed >= 2.0:  # Wait for 2 seconds
+                    self.flamethrower_damage_phase = "long"
+                    self.flamethrower_phase_start_time = current_time
+
+            elif self.flamethrower_damage_phase == "long":
+                if flamethrower_elapsed <= 0.3:  # Active for 0.3 seconds
+                    flames_hit = arcade.check_for_collision_with_list(self.player, self.flamethrower_list)
+                    if flames_hit and not self.player.invincible and not self.player.is_hurt:
+                        if self.player.hurt():
+                            self.flash_red = True
+                            self.flash_end_time = current_time + 0.2
+                else:
+                    self.flamethrower_damage_phase = "short"
+                    self.flamethrower_phase_start_time = current_time
 
         # ----- KEY COLLECTION SYSTEM -----
         if not self.player.is_dead and self.keys_list:
@@ -663,8 +757,18 @@ class Game(arcade.Window):
                 self.flash_end_time = current_time + 0.2
                 self.key_sound.play()
 
+        # ----- TUNNEL DOOR INTERACTION -----
+        if (not self.player.is_dead and self.keys_collected >= 6 
+            and self.tunnel_door_list and len(self.tunnel_door_list) > 0):
+            door_hit = arcade.check_for_collision_with_list(self.player, self.tunnel_door_list)
+            if door_hit:
+                # Player is at the door with enough keys - ready to transition
+                pass
+
         # ----- CAMERA FOLLOWS PLAYER -----
         self.camera.position = self.player.position
+
+# ... (keep all the existing code the same until the on_key_press method)
 
     def on_key_press(self, key, modifiers):
         self.held_keys.add(key)
@@ -673,6 +777,7 @@ class Game(arcade.Window):
         elif key == arcade.key.LSHIFT or key == arcade.key.RSHIFT:
             self.player.dash()
         elif key == arcade.key.E:
+            # Handle flask collection
             if self.flask_list:
                 flasks_nearby = arcade.check_for_collision_with_list(self.player, self.flask_list)
                 if flasks_nearby:
@@ -681,6 +786,7 @@ class Game(arcade.Window):
                     for flask in flasks_nearby:
                         flask.remove_from_sprite_lists()
 
+            # Handle speed flask collection
             if self.speed_flask_list:
                 speed_flasks_nearby = arcade.check_for_collision_with_list(self.player, self.speed_flask_list)
                 if speed_flasks_nearby:
@@ -693,10 +799,27 @@ class Game(arcade.Window):
                     for flask in speed_flasks_nearby:
                         flask.remove_from_sprite_lists()
             
-            if self.keys_collected >= 6:
-                if "Tunnel Door" in self.scene.sprite_lists:
-                    self.scene.remove_sprite_list_by_name("Tunnel Door")
+            # Handle level transition when player has 6 keys and is at the door
+            if (self.keys_collected >= 6 and self.tunnel_door_list and 
+                arcade.check_for_collision_with_list(self.player, self.tunnel_door_list)):
+                
+                # Play level complete sound
+                self.level_complete.play()
+                
+                # Remove the tunnel door
+                for door in self.tunnel_door_list:
+                    door.remove_from_sprite_lists()
+                
+                # Transition to next level after a short delay
+                arcade.schedule(self.load_next_level, 1.0)  # Wait 1 second before loading next level
 
+    def load_next_level(self, delta_time: float):
+        """Load the next level"""
+        self.current_level += 1
+        self.keys_collected = 0  # Reset keys for new level
+        self.load_level(self.current_level)
+
+# ... (keep the rest of the code the same)
     def on_key_release(self, key, modifiers):
         self.held_keys.discard(key)
 
