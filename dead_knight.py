@@ -312,6 +312,10 @@ class PlayerCharacter(arcade.Sprite):
                 self.change_x = 0
                 self.change_y = -self.dash_speed
 
+            # Play dash sound only when dash is triggered
+            if hasattr(self, "dash_sound"):
+                self.dash_sound.play()
+
     def hurt(self, damage_amount=1):
         current_time = time.time()
         if (not self.is_dead and not self.is_hurt 
@@ -327,6 +331,7 @@ class PlayerCharacter(arcade.Sprite):
             self.change_x = 0
             self.change_y = 0
             
+            # Apply knockback based on facing direction
             if self.facing_direction == DIRECTION_RIGHT:
                 self.center_x -= 20
             elif self.facing_direction == DIRECTION_LEFT:
@@ -338,6 +343,13 @@ class PlayerCharacter(arcade.Sprite):
                 
             if self.hurt_count >= self.max_hits_before_death:
                 self.die()
+            
+            # Return True if damage was actually applied
+            return True
+        
+        # Return False if no damage was applied
+        return False
+                
 
     def die(self):
         self.is_dead = True
@@ -384,6 +396,8 @@ class Game(arcade.Window):
         self.arrow_phase_start_time = time.time()
         self.next_arrow_phase = "long"
 
+        self.enemy_list = None
+
         # Health bar text label
         self.health_label = arcade.Text(
             "", 0, 0, arcade.color.WHITE, 12,
@@ -399,6 +413,13 @@ class Game(arcade.Window):
         self.heal_sound = arcade.Sound("music_and_sound/heal.wav")
         self.key_sound = arcade.Sound("music_and_sound/key.wav")
         self.speed_sound = arcade.Sound("music_and_sound/speed.wav")
+        self.dash = arcade.Sound("music_and_sound/dash.wav")
+        self.hurt_peak = arcade.Sound("music_and_sound/hurt_peak.mp3")
+        self.hurt_arrow = arcade.Sound("music_and_sound/hurt_arrow.mp3")
+        self.peak = arcade.Sound("music_and_sound/peak.mp3")
+        self.arrow = arcade.Sound("music_and_sound/arrow.mp3")
+        self.background_music = arcade.Sound("music_and_sound/background_ music.mp3")
+        self.background_music_player = None
 
     def setup(self):
         map_path = os.path.join(os.path.dirname(__file__), "Level_01.tmx")
@@ -458,6 +479,7 @@ class Game(arcade.Window):
         self.player.center_x = 1700
         self.player.center_y = 350
         self.scene.add_sprite("Player", self.player)
+        self.player.dash_sound = self.dash  # Add this line
 
         # Set up physics
         walls_and_collision_items = arcade.SpriteList()
@@ -472,6 +494,10 @@ class Game(arcade.Window):
         
         # Initialize camera
         self.camera = arcade.Camera2D()
+
+        if self.background_music_player is not None:
+            self.background_music_player.stop()
+        self.background_music_player = self.background_music.play(loop=True)
 
     def draw_health_bar(self):
         bar_left = self.player.center_x - HEALTHBAR_WIDTH / 2
@@ -494,7 +520,6 @@ class Game(arcade.Window):
             arcade.color.GREEN
         )
 
-        self.health_label.text = f"{self.player.max_hits_before_death - self.player.hurt_count}/{self.player.max_hits_before_death}"
         self.health_label.x = self.player.center_x
         self.health_label.y = self.player.center_y + HEALTHBAR_OFFSET_Y
         self.health_label.draw()
@@ -514,7 +539,7 @@ class Game(arcade.Window):
         self.draw_key_count()
 
     def on_update(self, delta_time):
-        # Don't process movement if dead
+    # Don't process movement if dead
         if self.player.is_dead:
             self.player.change_x = 0
             self.player.change_y = 0
@@ -523,6 +548,7 @@ class Game(arcade.Window):
                 self.player.change_x = 0
                 self.player.change_y = 0
 
+                # Calculate movement speed
                 if self.player.is_speed_boosted:
                     current_speed = 8.0
                     self.player.dash_speed = 15.0
@@ -530,9 +556,11 @@ class Game(arcade.Window):
                     current_speed = PLAYER_SPEED
                     self.player.dash_speed = 10.0
 
+                # Apply slow effect if in slow zone
                 if arcade.check_for_collision_with_list(self.player, self.slow_list):
                     current_speed *= 0.5
 
+                # Process movement input if not attacking
                 if self.player.current_attack == 0:
                     if arcade.key.W in self.held_keys or arcade.key.UP in self.held_keys:
                         self.player.change_y = current_speed
@@ -543,45 +571,53 @@ class Game(arcade.Window):
                     if arcade.key.D in self.held_keys or arcade.key.RIGHT in self.held_keys:
                         self.player.change_x = current_speed
 
+        # Update physics and animations
         self.physics_engine.update()
         self.scene.update_animation(delta_time)
         self.player.character_animation(delta_time)
         self.player.update_speed_boost()
         
         current_time = time.time()
+
+        for enemy in self.enemy_list:
+            enemy.update_animation(delta_time)
         
+        # ----- PEAK DAMAGE SYSTEM -----
         if not self.player.is_dead:
             peak_elapsed = current_time - self.peak_phase_start_time
 
             if self.peak_damage_phase == "wait":
                 if peak_elapsed >= 4.0:
                     self.peak_damage_phase = "cooldown1"
-                    self.peak_phase_start_time += 4.0  # increment by phase duration
+                    self.peak_phase_start_time = current_time
                     for peak in self.peak_list:
                         peak.visible = True
 
             elif self.peak_damage_phase == "cooldown1":
                 if peak_elapsed >= 0.2:
                     self.peak_damage_phase = "active"
-                    self.peak_phase_start_time += 0.2  # increment by phase duration
+                    self.peak_phase_start_time = current_time
+                    self.peak.play()
 
             elif self.peak_damage_phase == "active":
                 if peak_elapsed <= 2.0:
                     peaks_hit = arcade.check_for_collision_with_list(self.player, self.peak_list)
-                    if peaks_hit and not self.player.invincible:
-                        self.player.hurt()
-                        self.flash_red = True
-                        self.flash_end_time = current_time + 0.2
+                    if peaks_hit:
+                        # Only play sound if damage was actually applied
+                        if self.player.hurt():
+                            self.hurt_peak.play()
+                            self.flash_red = True
+                            self.flash_end_time = current_time + 0.2
                 else:
                     self.peak_damage_phase = "cooldown2"
-                    self.peak_phase_start_time += 2.0  # increment by phase duration
+                    self.peak_phase_start_time = current_time
                     for peak in self.peak_list:
                         peak.visible = False
 
             elif self.peak_damage_phase == "cooldown2":
                 if peak_elapsed >= 0.2:
                     self.peak_damage_phase = "wait"
-                    self.peak_phase_start_time += 0.2  # increment by phase duration
+                    self.peak_phase_start_time = current_time
 
         # ----- ARROW DAMAGE SYSTEM -----
         if not self.player.is_dead:
@@ -590,31 +626,34 @@ class Game(arcade.Window):
             if self.arrow_damage_phase == "hurt1":
                 if arrow_elapsed <= 0.1:
                     arrows_hit = arcade.check_for_collision_with_list(self.player, self.arrow_list)
-                    if arrows_hit and not self.player.invincible:
+                    if arrows_hit and not self.player.invincible and not self.player.is_hurt:
                         self.player.hurt()
+                        self.hurt_arrow.play()
                         self.flash_red = True
                         self.flash_end_time = current_time
                 else:
                     self.arrow_damage_phase = "wait"
-                    self.arrow_phase_start_time += 0.1
+                    self.arrow_phase_start_time = current_time
 
             elif self.arrow_damage_phase == "wait":
                 if arrow_elapsed >= 2.0:
                     self.arrow_damage_phase = "hurt2"
-                    self.arrow_phase_start_time += 2.0
+                    self.arrow_phase_start_time = current_time
+                    self.arrow.play()
 
             elif self.arrow_damage_phase == "hurt2":
                 if arrow_elapsed <= 0.3:
                     arrows_hit = arcade.check_for_collision_with_list(self.player, self.arrow_list)
-                    if arrows_hit and not self.player.invincible:
+                    if arrows_hit and not self.player.invincible and not self.player.is_hurt:
                         self.player.hurt()
+                        self.hurt_arrow.play()
                         self.flash_red = True
                         self.flash_end_time = current_time
                 else:
                     self.arrow_damage_phase = "hurt1"
-                    self.arrow_phase_start_time += 0.3
+                    self.arrow_phase_start_time = current_time
 
-
+        # ----- KEY COLLECTION SYSTEM -----
         if not self.player.is_dead and self.keys_list:
             keys_collected = arcade.check_for_collision_with_list(self.player, self.keys_list)
             for key_sprite in keys_collected:
@@ -638,7 +677,7 @@ class Game(arcade.Window):
                 flasks_nearby = arcade.check_for_collision_with_list(self.player, self.flask_list)
                 if flasks_nearby:
                     self.player.heal()
-                    self.heal_sound.play()  # Play heal sound
+                    self.heal_sound.play()
                     for flask in flasks_nearby:
                         flask.remove_from_sprite_lists()
 
