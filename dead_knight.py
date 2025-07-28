@@ -520,7 +520,7 @@ class Game(arcade.Window):
 
         self.scene.add_sprite("Player", self.player)
         
-        # Set up physics
+        # Set up physics.
         walls_and_collision_items = arcade.SpriteList()
         walls_and_collision_items.extend(self.scene["Walls"])
         walls_and_collision_items.extend(self.scene["Collision Items"])
