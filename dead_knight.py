@@ -695,11 +695,7 @@ class Game(arcade.Window):
             if self.flamethrower_damage_phase == "short":
                 if flamethrower_elapsed <= 0.15:  # Active for 0.15 seconds
                     flames_hit = arcade.check_for_collision_with_list(self.player, self.flamethrower_list)
-                    if flames_hit and not self.player.invincible and not self.player.is_hurt:
-                        if self.player.hurt():
-                            self.hurt_arrow.play()
-                            self.flash_red = True
-                            self.flash_end_time = current_time + 0.2
+                
                 else:
                     self.flamethrower_damage_phase = "wait"
                     self.flamethrower_phase_start_time = current_time
