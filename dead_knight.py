@@ -6,7 +6,7 @@ import time
 SCREEN_WIDTH = 1440
 SCREEN_HEIGHT = 720
 SCREEN_TITLE = "Dead Knight"
-PLAYER_SPEED = 4
+PLAYER_SPEED = 5.5
 TILE_SCALING = 1.5
 CHARACTER_SCALING = 2
 UPDATES_PER_FRAME = 5
@@ -39,7 +39,7 @@ class PlayerCharacter(arcade.Sprite):
         self.is_dashing = False
         self.dash_cooldown = 0
         self.dash_duration = 0.2
-        self.dash_speed = 11
+        self.dash_speed = 13
         self.dash_cooldown_time = 0.5
         self.dash_start_time = 0
         self.original_speed = PLAYER_SPEED
@@ -63,7 +63,7 @@ class PlayerCharacter(arcade.Sprite):
 
         self.is_speed_boosted = False
         self.speed_boost_start_time = 0
-        self.speed_boost_duration = 17.0
+        self.speed_boost_duration = 20.0
         self.speed_multiplier = 1.5
 
         dir_name = os.path.dirname(os.path.abspath(__file__))
@@ -424,6 +424,7 @@ class Game(arcade.Window):
         self.hurt_arrow = arcade.Sound("music_and_sound/hurt_arrow.mp3")
         self.peak = arcade.Sound("music_and_sound/peak.mp3")
         self.arrow = arcade.Sound("music_and_sound/arrow.mp3")
+        self.flamethrower = arcade.Sound("music_and_sound/flamethrower.mp3")
         self.background_music = arcade.Sound("music_and_sound/background_music.mp3")
         self.background_music_player = None
         self.level_complete = arcade.Sound("music_and_sound/level_complete.wav")
@@ -435,53 +436,27 @@ class Game(arcade.Window):
     def load_level(self, level_number):
         """Load the specified level"""
         map_path = os.path.join(os.path.dirname(__file__), f"Level_{level_number:02d}.tmx")
-        
-        try:
-            tilemap = arcade.load_tilemap(
-                map_path,
-                scaling=TILE_SCALING,
-                layer_options={
-                    "Foreground Fake Walls": {},
-                    "Walls": {"use_spatial_hash": True},
-                    "Collision Items": {"use_spatial_hash": True},
-                    "Boundary Walls": {"use_spatial_hash": True},
-                    "Non Collision Items": {},
-                    "Peaks": {},
-                    "Arrow": {},
-                    "Slow Speed Items": {},
-                    "Small Health Flasks": {},
-                    "Small Speed Flasks": {},
-                    "Keys": {},
-                    "Walls On Top of Boundary": {},
-                    "Tunnel Door": {},
-                    "Flamethrower": {}
-                }
-            )
-        except FileNotFoundError:
-            print(f"Level {level_number} not found! Loading level 1 instead.")
-            self.current_level = 1
-            map_path = os.path.join(os.path.dirname(__file__), "Level_01.tmx")
-            tilemap = arcade.load_tilemap(
-                map_path,
-                scaling=TILE_SCALING,
-                layer_options={
-                    "Foreground Fake Walls": {},
-                    "Walls": {"use_spatial_hash": True},
-                    "Collision Items": {"use_spatial_hash": True},
-                    "Boundary Walls": {"use_spatial_hash": True},
-                    "Non Collision Items": {},
-                    "Peaks": {},
-                    "Arrow": {},
-                    "Slow Speed Items": {},
-                    "Small Health Flasks": {},
-                    "Small Speed Flasks": {},
-                    "Keys": {},
-                    "Walls On Top of Boundary": {},
-                    "Tunnel Door": {},
-                    "Flamethrower": {}
-                }
-            )
 
+        tilemap = arcade.load_tilemap(
+                map_path,
+                scaling=TILE_SCALING,
+                layer_options={
+                    "Foreground Fake Walls": {},
+                    "Walls": {"use_spatial_hash": True},
+                    "Collision Items": {"use_spatial_hash": True},
+                    "Boundary Walls": {"use_spatial_hash": True},
+                    "Non Collision Items": {},
+                    "Peaks": {},
+                    "Arrow": {},
+                    "Slow Speed Items": {},
+                    "Small Health Flasks": {},
+                    "Small Speed Flasks": {},
+                    "Keys": {},
+                    "Walls On Top of Boundary": {},
+                    "Tunnel Door": {},
+                    "Flamethrower": {}
+                }
+            )
         # Initialize the scene
         self.scene = arcade.Scene.from_tilemap(tilemap)
         
@@ -528,10 +503,10 @@ class Game(arcade.Window):
         else:
             # Reset player position based on level
             if level_number == 1:
-                self.player.center_x = 1700
-                self.player.center_y = 350
+                self.player.center_x = 350
+                self.player.center_y = 1700
             elif level_number == 2:
-                self.player.center_x = 100
+                self.player.center_x = 1700
                 self.player.center_y = 100
             
             # Reset player state (but keep health and keys)
@@ -559,9 +534,6 @@ class Game(arcade.Window):
         # Initialize camera
         self.camera = arcade.Camera2D()
 
-        # Play background music
-        if self.background_music_player is not None:
-            self.background_music_player.stop()
         self.background_music_player = self.background_music.play(loop=True)
 
     def draw_health_bar(self):
@@ -725,6 +697,7 @@ class Game(arcade.Window):
                     flames_hit = arcade.check_for_collision_with_list(self.player, self.flamethrower_list)
                     if flames_hit and not self.player.invincible and not self.player.is_hurt:
                         if self.player.hurt():
+                            self.hurt_arrow.play()
                             self.flash_red = True
                             self.flash_end_time = current_time + 0.2
                 else:
@@ -735,12 +708,14 @@ class Game(arcade.Window):
                 if flamethrower_elapsed >= 2.0:  # Wait for 2 seconds
                     self.flamethrower_damage_phase = "long"
                     self.flamethrower_phase_start_time = current_time
+                    self.flamethrower.play()
 
             elif self.flamethrower_damage_phase == "long":
                 if flamethrower_elapsed <= 0.3:  # Active for 0.3 seconds
                     flames_hit = arcade.check_for_collision_with_list(self.player, self.flamethrower_list)
                     if flames_hit and not self.player.invincible and not self.player.is_hurt:
                         if self.player.hurt():
+                            self.hurt_arrow.play()
                             self.flash_red = True
                             self.flash_end_time = current_time + 0.2
                 else:
@@ -767,8 +742,6 @@ class Game(arcade.Window):
 
         # ----- CAMERA FOLLOWS PLAYER -----
         self.camera.position = self.player.position
-
-# ... (keep all the existing code the same until the on_key_press method)
 
     def on_key_press(self, key, modifiers):
         self.held_keys.add(key)
