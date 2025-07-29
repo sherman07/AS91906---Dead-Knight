@@ -6,7 +6,7 @@ import time
 SCREEN_WIDTH = 1440
 SCREEN_HEIGHT = 720
 SCREEN_TITLE = "Dead Knight"
-PLAYER_SPEED = 5.5
+PLAYER_SPEED = 10
 TILE_SCALING = 1.5
 CHARACTER_SCALING = 2
 UPDATES_PER_FRAME = 5
@@ -428,6 +428,15 @@ class Game(arcade.Window):
         self.background_music = arcade.Sound("music_and_sound/background_music.mp3")
         self.background_music_player = None
         self.level_complete = arcade.Sound("music_and_sound/level_complete.wav")
+        
+        self.peak_timer        = 0.0
+        self.peak_state        = "wait"     # "wait", "cooldown1", "active", "cooldown2"
+
+        self.arrow_timer       = 0.0
+        self.arrow_state       = "wait"     # "short", "wait", "long"
+
+        self.flame_timer       = 0.0
+        self.flame_state       = "wait"     # "short", "wait", "long"
 
     def setup(self):
         """Set up the game and initialize the variables."""
@@ -435,6 +444,25 @@ class Game(arcade.Window):
 
     def load_level(self, level_number):
         """Load the specified level"""
+        # Reset keys collected when loading new level
+        self.keys_collected = 0
+        
+        # Stop previous background music
+        if self.background_music_player:
+            self.background_music_player.stop()
+        
+        # Reset all sprite lists
+        self.scene = None
+        self.foreground_layers = None
+        self.peak_list = None
+        self.arrow_list = None
+        self.flamethrower_list = None
+        self.slow_list = None
+        self.flask_list = None
+        self.speed_flask_list = None
+        self.keys_list = None
+        self.tunnel_door_list = None
+
         map_path = os.path.join(os.path.dirname(__file__), f"Level_{level_number:02d}.tmx")
 
         tilemap = arcade.load_tilemap(
@@ -501,14 +529,6 @@ class Game(arcade.Window):
             self.player.center_y = 350
             self.player.dash_sound = self.dash
         else:
-            # Reset player position based on level
-            if level_number == 1:
-                self.player.center_x = 350
-                self.player.center_y = 1700
-            elif level_number == 2:
-                self.player.center_x = 1700
-                self.player.center_y = 100
-            
             # Reset player state (but keep health and keys)
             self.player.is_dead = False
             self.player.is_hurt = False
@@ -517,6 +537,14 @@ class Game(arcade.Window):
             self.player.cur_texture = 0
             self.player.change_x = 0
             self.player.change_y = 0
+
+            # Set player position based on level
+            if level_number == 1:
+                self.player.center_x = 350
+                self.player.center_y = 1700
+            elif level_number == 2:
+                self.player.center_x = 200
+                self.player.center_y = 1300
 
         self.scene.add_sprite("Player", self.player)
         
@@ -617,106 +645,110 @@ class Game(arcade.Window):
         
         current_time = time.time()
 
-        # ----- PEAK DAMAGE SYSTEM -----
+        # ----- PEAK DAMAGE -----
         if not self.player.is_dead:
-            peak_elapsed = current_time - self.peak_phase_start_time
+            self.peak_timer += delta_time
 
-            if self.peak_damage_phase == "wait":
-                if peak_elapsed >= 4.0:
-                    self.peak_damage_phase = "cooldown1"
-                    self.peak_phase_start_time = current_time
+            # 1) WAIT (no damage) for 4s
+            if self.peak_state == "wait":
+                if self.peak_timer >= 4.0:
+                    self.peak_state = "prep"
+                    self.peak_timer = 0.0
+                    # Reveal the peaks before damage window
                     for peak in self.peak_list:
                         peak.visible = True
 
-            elif self.peak_damage_phase == "cooldown1":
-                if peak_elapsed >= 0.2:
-                    self.peak_damage_phase = "active"
-                    self.peak_phase_start_time = current_time
+            # 2) PREP (no damage) for 0.2s — you could play a warning sound/animation here
+            elif self.peak_state == "prep":
+                if self.peak_timer >= 0.2:
+                    self.peak_state = "active"
+                    self.peak_timer = 0.0
                     self.peak.play()
 
-            elif self.peak_damage_phase == "active":
-                if peak_elapsed <= 2.0:
-                    peaks_hit = arcade.check_for_collision_with_list(self.player, self.peak_list)
-                    if peaks_hit:
-                        # Only play sound if damage was actually applied
+            # 3) ACTIVE (damage) for 2s
+            elif self.peak_state == "active":
+                if self.peak_timer <= 2.0:
+                    if arcade.check_for_collision_with_list(self.player, self.peak_list):
                         if self.player.hurt():
                             self.hurt_peak.play()
                             self.flash_red = True
-                            self.flash_end_time = current_time + 0.2
+                            self.flash_end_time = time.time() + 0.2
                 else:
-                    self.peak_damage_phase = "cooldown2"
-                    self.peak_phase_start_time = current_time
+                    self.peak_state = "cooldown"
+                    self.peak_timer = 0.0
+                    # Hide after damage window
                     for peak in self.peak_list:
                         peak.visible = False
 
-            elif self.peak_damage_phase == "cooldown2":
-                if peak_elapsed >= 0.2:
-                    self.peak_damage_phase = "wait"
-                    self.peak_phase_start_time = current_time
+            # 4) COOLDOWN (no damage) for 0.2s, then back to WAIT
+            elif self.peak_state == "cooldown":
+                if self.peak_timer >= 0.2:
+                    self.peak_state = "wait"
+                    self.peak_timer = 0.0
 
-        # ----- ARROW DAMAGE SYSTEM -----
+        # ----- ARROW DAMAGE -----
         if not self.player.is_dead:
-            arrow_elapsed = current_time - self.arrow_phase_start_time
+            self.arrow_timer += delta_time
 
-            if self.arrow_damage_phase == "short":
-                if arrow_elapsed <= 0.1:  # Active for 0.1 seconds
-                    arrows_hit = arcade.check_for_collision_with_list(self.player, self.arrow_list)
-                    if arrows_hit and not self.player.invincible and not self.player.is_hurt:
-                        if self.player.hurt():  # This now returns True if damage was applied
-                            self.hurt_arrow.play()
-                            self.flash_red = True
-                            self.flash_end_time = current_time + 0.2
-                else:
-                    self.arrow_damage_phase = "wait"
-                    self.arrow_phase_start_time = current_time
-
-            elif self.arrow_damage_phase == "wait":
-                if arrow_elapsed >= 2.0:  # Wait for 2 seconds
-                    self.arrow_damage_phase = "long"
-                    self.arrow_phase_start_time = current_time
-                    self.arrow.play()
-
-            elif self.arrow_damage_phase == "long":
-                if arrow_elapsed <= 0.3:  # Active for 0.3 seconds
-                    arrows_hit = arcade.check_for_collision_with_list(self.player, self.arrow_list)
-                    if arrows_hit and not self.player.invincible and not self.player.is_hurt:
-                        if self.player.hurt():  # This now returns True if damage was applied
-                            self.hurt_arrow.play()
-                            self.flash_red = True
-                            self.flash_end_time = current_time + 0.2
-                else:
-                    self.arrow_damage_phase = "short"
-                    self.arrow_phase_start_time = current_time
-                    
-        # ----- FLAMETHROWER DAMAGE SYSTEM -----
-        if not self.player.is_dead:
-            flamethrower_elapsed = current_time - self.flamethrower_phase_start_time
-
-            if self.flamethrower_damage_phase == "short":
-                if flamethrower_elapsed <= 0.15:  # Active for 0.15 seconds
-                    flames_hit = arcade.check_for_collision_with_list(self.player, self.flamethrower_list)
-                
-                else:
-                    self.flamethrower_damage_phase = "wait"
-                    self.flamethrower_phase_start_time = current_time
-
-            elif self.flamethrower_damage_phase == "wait":
-                if flamethrower_elapsed >= 2.0:  # Wait for 2 seconds
-                    self.flamethrower_damage_phase = "long"
-                    self.flamethrower_phase_start_time = current_time
-                    self.flamethrower.play()
-
-            elif self.flamethrower_damage_phase == "long":
-                if flamethrower_elapsed <= 0.3:  # Active for 0.3 seconds
-                    flames_hit = arcade.check_for_collision_with_list(self.player, self.flamethrower_list)
-                    if flames_hit and not self.player.invincible and not self.player.is_hurt:
+            if self.arrow_state == "short":
+                if self.arrow_timer <= 0.1:
+                    if arcade.check_for_collision_with_list(self.player, self.arrow_list):
                         if self.player.hurt():
                             self.hurt_arrow.play()
                             self.flash_red = True
-                            self.flash_end_time = current_time + 0.2
+                            self.flash_end_time = time.time() + 0.2
                 else:
-                    self.flamethrower_damage_phase = "short"
-                    self.flamethrower_phase_start_time = current_time
+                    self.arrow_state = "wait"
+                    self.arrow_timer = 0.0
+
+            elif self.arrow_state == "wait":
+                if self.arrow_timer >= 2.0:
+                    self.arrow_state = "long"
+                    self.arrow_timer = 0.0
+                    self.arrow.play()
+
+            elif self.arrow_state == "long":
+                if self.arrow_timer <= 0.3:
+                    if arcade.check_for_collision_with_list(self.player, self.arrow_list):
+                        if self.player.hurt():
+                            self.hurt_arrow.play()
+                            self.flash_red = True
+                            self.flash_end_time = time.time() + 0.2
+                else:
+                    self.arrow_state = "short"
+                    self.arrow_timer = 0.0
+
+        # ----- FLAMETHROWER DAMAGE -----
+        if not self.player.is_dead:
+            self.flame_timer += delta_time
+
+            if self.flame_state == "short":
+                if self.flame_timer <= 0.15:
+                    if arcade.check_for_collision_with_list(self.player, self.flamethrower_list):
+                        if self.player.hurt():
+                            self.hurt_arrow.play()    # reuse arrow hurt sound
+                            self.flash_red = True
+                            self.flash_end_time = time.time() + 0.2
+                else:
+                    self.flame_state = "wait"
+                    self.flame_timer = 0.0
+
+            elif self.flame_state == "wait":
+                if self.flame_timer >= 2.0:
+                    self.flame_state = "long"
+                    self.flame_timer = 0.0
+                    self.flamethrower.play()
+
+            elif self.flame_state == "long":
+                if self.flame_timer <= 0.3:
+                    if arcade.check_for_collision_with_list(self.player, self.flamethrower_list):
+                        if self.player.hurt():
+                            self.hurt_arrow.play()
+                            self.flash_red = True
+                            self.flash_end_time = time.time() + 0.2
+                else:
+                    self.flame_state = "short"
+                    self.flame_timer = 0.0
 
         # ----- KEY COLLECTION SYSTEM -----
         if not self.player.is_dead and self.keys_list:
