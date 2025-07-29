@@ -2,7 +2,7 @@
 <tileset version="1.10" tiledversion="1.11.2" name="flamethrower" tilewidth="64" tileheight="64" tilecount="8" columns="0">
  <grid orientation="orthogonal" width="1" height="1"/>
  <tile id="0">
-  <image source="2D Pixel Dungeon Asset Pack/animations/flamethrower_32*32/flamethrower_2_4.png" width="64" height="32"/>
+  <image source="2D Pixel Dungeon Asset Pack/animations/flamethrower_32-32/flamethrower_2_4.png" width="64" height="32"/>
   <animation>
    <frame tileid="1" duration="150"/>
    <frame tileid="0" duration="2000"/>
@@ -11,19 +11,19 @@
   </animation>
  </tile>
  <tile id="1">
-  <image source="2D Pixel Dungeon Asset Pack/animations/flamethrower_32*32/flamethrower_2_3.png" width="64" height="32"/>
+  <image source="2D Pixel Dungeon Asset Pack/animations/flamethrower_32-32/flamethrower_2_3.png" width="64" height="32"/>
  </tile>
  <tile id="2">
-  <image source="2D Pixel Dungeon Asset Pack/animations/flamethrower_32*32/flamethrower_2_2.png" width="64" height="32"/>
+  <image source="2D Pixel Dungeon Asset Pack/animations/flamethrower_32-32/flamethrower_2_2.png" width="64" height="32"/>
  </tile>
  <tile id="3">
-  <image source="2D Pixel Dungeon Asset Pack/animations/flamethrower_32*32/flamethrower_2_1.png" width="64" height="32"/>
+  <image source="2D Pixel Dungeon Asset Pack/animations/flamethrower_32-32/flamethrower_2_1.png" width="64" height="32"/>
  </tile>
  <tile id="4">
-  <image source="2D Pixel Dungeon Asset Pack/animations/flamethrower_32*32/flamethrower_1_4.png" width="32" height="64"/>
+  <image source="2D Pixel Dungeon Asset Pack/animations/flamethrower_32-32/flamethrower_1_4.png" width="32" height="64"/>
  </tile>
  <tile id="5">
-  <image source="2D Pixel Dungeon Asset Pack/animations/flamethrower_32*32/flamethrower_1_3.png" width="32" height="64"/>
+  <image source="2D Pixel Dungeon Asset Pack/animations/flamethrower_32-32/flamethrower_1_3.png" width="32" height="64"/>
   <animation>
    <frame tileid="5" duration="150"/>
    <frame tileid="4" duration="2000"/>
@@ -32,9 +32,9 @@
   </animation>
  </tile>
  <tile id="6">
-  <image source="2D Pixel Dungeon Asset Pack/animations/flamethrower_32*32/flamethrower_1_2.png" width="32" height="64"/>
+  <image source="2D Pixel Dungeon Asset Pack/animations/flamethrower_32-32/flamethrower_1_2.png" width="32" height="64"/>
  </tile>
  <tile id="7">
-  <image source="2D Pixel Dungeon Asset Pack/animations/flamethrower_32*32/flamethrower_1_1.png" width="32" height="64"/>
+  <image source="2D Pixel Dungeon Asset Pack/animations/flamethrower_32-32/flamethrower_1_1.png" width="32" height="64"/>
  </tile>
 </tileset>
