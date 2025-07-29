@@ -482,7 +482,12 @@ class Game(arcade.Window):
                     "Keys": {},
                     "Walls On Top of Boundary": {},
                     "Tunnel Door": {},
-                    "Flamethrower": {}
+                    "Flamethrower": {},
+                    "Background": {},
+                    "Floor": {},
+                    "Tunnel": {}
+                    
+                    
                 }
             )
         # Initialize the scene
