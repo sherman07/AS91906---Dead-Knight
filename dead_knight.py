@@ -9,10 +9,13 @@ SCREEN_WIDTH = 1440
 SCREEN_HEIGHT = 720
 SCREEN_TITLE = "Dead Knight"
 PLAYER_SPEED = 5.5
+PLAYER_SPEED_BOOST = 10.0
+PLAYER_DASH_BOOST = 15.0
 TILE_SCALING = 1.5
 CHARACTER_SCALING = 2
 UPDATES_PER_FRAME = 5
 MAX_LEVEL = 3
+KEY_COUNT = 6
 
 # Health bar constants
 HEALTHBAR_WIDTH = 100
@@ -80,7 +83,7 @@ class PlayerCharacter(arcade.Sprite):
         # Speed boost properties
         self.is_speed_boosted = False
         self.speed_boost_start_time = 0
-        self.speed_boost_duration = 20.0
+        self.speed_boost_duration = 4.0
         self.speed_multiplier = 1.5
         
         # Death state
@@ -225,6 +228,7 @@ class PlayerCharacter(arcade.Sprite):
         Args:
             delta_time (float): Time since last update
         """
+        
         # Handle death animation
         if self.is_dead:
             self._handle_death_animation()
@@ -258,109 +262,231 @@ class PlayerCharacter(arcade.Sprite):
 
         # Handle regular movement animations
         self._handle_standard_animation()
-
+        
     def _handle_death_animation(self):
-        """Manage death animation sequence."""
+        """
+        Manage death animation sequence.
+        
+        This method will:
+        1. Initializes death timing on first call
+        2. Calculates elapsed time since death started
+        3. Determines current animation frame based on progress
+        4. Sets final frame and marks death completion
+        """
+        
+        # Initialize death timing if first frame of death animation
         if not hasattr(self, 'death_start_time'):
             self.death_start_time = time.time()
             self.death_completed = False
-                
+        
+        # Calculate animation progress from 0.0 to 1.0
         elapsed = time.time() - self.death_start_time
-        death_duration = 1.0
+        death_duration = 1.0  # Total time for death animation
+        
+        # Get number of frames in death animation for current direction
         death_frames = len(self.death_textures[self.facing_direction])
         
         if elapsed < death_duration:
+            
+            # Calculate current frame based on progress through 
+            # animation
             frame = min(
                 int(elapsed / death_duration * death_frames), 
                 death_frames - 1
             )
+            
+            # Set texture to current death animation frame
             self.texture = self.death_textures[self.facing_direction][frame]
+            
         else:
+            
+            # Animation complete - show final frame
             frame = death_frames - 1
             self.texture = self.death_textures[self.facing_direction][frame]
+            
+            # Mark death as completed if not already done
             if not self.death_completed:
                 self.death_completed = True
                 self.death_complete_time = time.time()
 
     def _handle_healing_animation(self):
-        """Manage healing animation sequence."""
+        """
+        Manage healing animation sequence.
+        
+        This method:
+        1. Calculates elapsed time since healing started
+        2. Ends animation when duration is reached
+        3. Determines current frame based on progress
+        4. Updates character texture
+        """
+        
+        # Calculate time since healing started
         elapsed = time.time() - self.heal_start_time
+        
+        # Check if healing animation duration has completed
         if elapsed >= self.heal_duration:
+            
+            # Reset animation state
             self.is_healing = False
             self.cur_texture = 0
+            
         else:
+            
+            # Calculate current animation frame
             num_frames = len(self.heal_textures[self.facing_direction])
             frame = min(
                 int(elapsed / self.heal_duration * num_frames),
                 num_frames - 1
             )
+            
+            # Update to current healing frame
             self.texture = self.heal_textures[self.facing_direction][frame]
 
     def _handle_hurt_animation(self):
-        """Manage hurt animation sequence."""
+        """
+        Manage hurt animation sequence.
+        
+        This method:
+        1. Calculates elapsed time since damage taken
+        2. Ends animation when duration is reached
+        3. Determines current frame based on progress
+        4. Updates character texture
+        """
+        
+        # Calculate time since hurt started
         elapsed = time.time() - self.hurt_start_time
+        
+        # Check if hurt animation duration has completed
         if elapsed >= self.hurt_duration:
+            
+            # Reset animation state
             self.is_hurt = False
             self.cur_texture = 0
+            
         else:
+            
+            # Calculate current animation frame
             num_frames = len(self.hurt_textures[self.facing_direction])
             frame = min(
                 int(elapsed / self.hurt_duration * num_frames),
                 num_frames - 1
             )
+            
+            # Update to current hurt frame
             self.texture = self.hurt_textures[self.facing_direction][frame]
 
     def _update_facing_direction(self):
-        """Update direction based on movement vector."""
+        """
+        Update character's facing direction based on movement.
+        
+        This method:
+        1. Determines primary movement direction
+        2. Sets both direction and facing_direction properties
+        Note: Facing direction takes precedence over movement direction
+        for animations when not moving.
+        """
+        
+        # Vertical movement takes precedence
         if self.change_y > 0:
             self.direction = DIRECTION_UP
             self.facing_direction = DIRECTION_UP
+            
         elif self.change_y < 0:
             self.direction = DIRECTION_DOWN
             self.facing_direction = DIRECTION_DOWN
+            
+        # Horizontal movement
         elif self.change_x < 0:
             self.direction = DIRECTION_LEFT
             self.facing_direction = DIRECTION_LEFT
+            
         elif self.change_x > 0:
             self.direction = DIRECTION_RIGHT
             self.facing_direction = DIRECTION_RIGHT
 
     def _handle_dash_animation(self):
-        """Manage dash animation sequence."""
-        self.cur_texture += 1
-        dash_frames = len(self.dash_textures[self.facing_direction]) * UPDATES_PER_FRAME
+        """
+        Manage dash animation sequence.
         
-        # End dash if duration exceeded or animation complete
+        This method:
+        1. Advances animation frame counter
+        2. Checks for dash completion conditions
+        3. Resets state when dash ends
+        4. Updates texture to current dash frame
+        """
+        
+        # Advance animation counter
+        self.cur_texture += 1
+        
+        # Calculate total frames in dash animation
+        dash_frames = len(self.dash_textures[self.facing_direction])\
+            * UPDATES_PER_FRAME
+        
+        # Check dash completion conditions:
+        # - Time-based expiration
+        # - Animation cycle completion
+        
         current_time = time.time()
-        dash_time_expired = current_time - self.dash_start_time >= self.dash_duration
+        dash_time_expired = current_time - self.dash_start_time\
+            >= self.dash_duration
         animation_complete = self.cur_texture >= dash_frames
         
         if dash_time_expired or animation_complete:
+            
+            # End dash state
             self.is_dashing = False
             self.cur_texture = 0
             self.change_x = 0
             self.change_y = 0
+            
         else:
+            
+            # Calculate current animation frame
             frame = min(
-                self.cur_texture // UPDATES_PER_FRAME, 
+                self.cur_texture // UPDATES_PER_FRAME,
                 len(self.dash_textures[self.facing_direction]) - 1
             )
+            
+            # Update to current dash frame
             self.texture = self.dash_textures[self.facing_direction][frame]
 
     def _handle_standard_animation(self):
-        """Manage standard idle/walk animations."""
+        """
+        Manage standard idle and walking animations.
+        
+        This method:
+        1. Advances animation frame counter
+        2. Resets counter when animation cycle completes
+        3. Selects appropriate animation set (idle or walk)
+        4. Updates character texture
+        """
+        
+        # Advance animation counter
         self.cur_texture += 1
+        
+        # Calculate maximum frames in animation cycle
         max_frame = 7 * UPDATES_PER_FRAME
         
-        if self.change_x == 0 and self.change_y == 0:  # Idle
+        # Handle idle animation (no movement)
+        if self.change_x == 0 and self.change_y == 0:
+            # Reset counter when animation cycle completes
             if self.cur_texture >= max_frame:
                 self.cur_texture = 0
+            
+            # Convert counter to frame index
             frame = self.cur_texture // UPDATES_PER_FRAME
+            # Set idle texture for current direction
             self.texture = self.idle_textures[self.direction][frame]
-        else:  # Walking
+        
+        # Handle walking animation
+        else:
+            # Reset counter when animation cycle completes
             if self.cur_texture >= max_frame:
                 self.cur_texture = 0
+            
+            # Convert counter to frame index
             frame = self.cur_texture // UPDATES_PER_FRAME
+            # Set walking texture for current direction
             self.texture = self.walk_textures[self.direction][frame]
     
     def heal(self):
@@ -372,6 +498,7 @@ class PlayerCharacter(arcade.Sprite):
         - Not currently in special state (dash/hurt/heal)
         - Heal cooldown expired
         """
+        
         if (not self.is_dead and not self.is_healing 
             and not self.is_hurt and not self.is_dashing 
             and self.heal_cooldown <= 0):
@@ -391,6 +518,7 @@ class PlayerCharacter(arcade.Sprite):
         - Not currently dashing
         - Dash cooldown expired
         """
+        
         if (not self.is_dead and not self.is_dashing 
             and self.dash_cooldown <= 0):
                 
@@ -405,14 +533,18 @@ class PlayerCharacter(arcade.Sprite):
             if self.facing_direction == DIRECTION_RIGHT:
                 self.change_x = self.dash_speed
                 self.change_y = 0
+                
             elif self.facing_direction == DIRECTION_LEFT:
                 self.change_x = -self.dash_speed
                 self.change_y = 0
+                
             elif self.facing_direction == DIRECTION_UP:
                 self.change_x = 0
+                
                 self.change_y = self.dash_speed
             elif self.facing_direction == DIRECTION_DOWN:
                 self.change_x = 0
+                
                 self.change_y = -self.dash_speed
 
             # Play dash sound if available
@@ -429,6 +561,7 @@ class PlayerCharacter(arcade.Sprite):
         Returns:
             bool: True if damage was applied, False otherwise
         """
+        
         current_time = time.time()
         invincible_period = current_time - self.last_hurt_time <= self.invincibility_duration
         
@@ -460,12 +593,15 @@ class PlayerCharacter(arcade.Sprite):
             if self.hurt_count >= self.max_hits_before_death:
                 self.die()
             
-            return True  # Damage applied
+            # Damage applied
+            return True
         
-        return False  # No damage applied
+        # No damage applied
+        return False
                 
     def die(self):
         """Set player to death state."""
+        
         self.is_dead = True
         self.death_start_time = time.time()
         self.change_x = 0
@@ -476,12 +612,14 @@ class PlayerCharacter(arcade.Sprite):
 
     def apply_speed_boost(self):
         """Apply speed boost effect to player."""
+        
         if not self.is_dead:
             self.is_speed_boosted = True
             self.speed_boost_start_time = time.time()
 
     def update_speed_boost(self):
         """Update speed boost duration and expiration."""
+        
         if self.is_speed_boosted:
             elapsed = time.time() - self.speed_boost_start_time
             if elapsed >= self.speed_boost_duration:
@@ -504,6 +642,7 @@ class Game(arcade.Window):
     
     def __init__(self):
         """Initialize game window and resources."""
+        
         super().__init__(SCREEN_WIDTH, SCREEN_HEIGHT, SCREEN_TITLE)
         arcade.set_background_color(arcade.color.BLACK)
 
@@ -558,6 +697,7 @@ class Game(arcade.Window):
 
     def _load_sounds(self):
         """Load all game sound effects."""
+        
         self.heal_sound = arcade.Sound("music_and_sound/heal.wav")
         self.key_sound = arcade.Sound("music_and_sound/key.wav")
         self.speed_sound = arcade.Sound("music_and_sound/speed.wav")
@@ -567,12 +707,15 @@ class Game(arcade.Window):
         self.peak = arcade.Sound("music_and_sound/peak.mp3")
         self.arrow = arcade.Sound("music_and_sound/arrow.mp3")
         self.flamethrower = arcade.Sound("music_and_sound/flamethrower.mp3")
-        self.background_music = arcade.Sound("music_and_sound/background_music.mp3")
-        self.level_complete = arcade.Sound("music_and_sound/level_complete.wav")
+        self.background_music = arcade.Sound\
+            ("music_and_sound/background_music.mp3")
+        self.level_complete = arcade.Sound\
+            ("music_and_sound/level_complete.wav")
         self.background_music_player = None
 
     def setup(self):
         """Initialize game state and load first level."""
+        
         self.load_level(self.current_level)
 
     def load_level(self, level_number):
@@ -582,6 +725,7 @@ class Game(arcade.Window):
         Args:
             level_number (int): Level number to load
         """
+        
         # Reset keys for new level
         self.keys_collected = 0
         
@@ -650,6 +794,7 @@ class Game(arcade.Window):
 
     def _process_foreground_layers(self, tilemap):
         """Process foreground layers for proper rendering."""
+        
         # Extract foreground layers
         foreground_fake_walls = tilemap.sprite_lists.get(
             "Foreground Fake Walls", arcade.SpriteList()
@@ -669,6 +814,7 @@ class Game(arcade.Window):
 
     def _initialize_game_objects(self, tilemap):
         """Initialize game objects from tilemap."""
+        
         # Peaks (damage traps)
         self.peak_list = tilemap.sprite_lists.get(
             "Peaks", arcade.SpriteList()
@@ -690,19 +836,23 @@ class Game(arcade.Window):
         for flame in self.flamethrower_list:
             flame.properties = {"damage": True, "damage_amount": 1}
 
-        # Other objects
+        # Other objects inside of the tilemap
         self.slow_list = tilemap.sprite_lists.get(
             "Slow Speed Items", arcade.SpriteList()
         )
+        
         self.flask_list = tilemap.sprite_lists.get(
             "Small Health Flasks", arcade.SpriteList()
         )
+        
         self.speed_flask_list = tilemap.sprite_lists.get(
             "Small Speed Flasks", arcade.SpriteList()
         )
+        
         self.keys_list = tilemap.sprite_lists.get(
             "Keys", arcade.SpriteList()
         )
+        
         self.tunnel_door_list = tilemap.sprite_lists.get(
             "Tunnel Door", arcade.SpriteList()
         )
@@ -711,10 +861,11 @@ class Game(arcade.Window):
 
     def _initialize_player(self, level_number):
         """Initialize or reset player for current level."""
+        
         # Hide tunnel until keys collected
         if (self.player is not None 
             and not self.player.is_dead 
-            and self.keys_collected >= 6 
+            and self.keys_collected >= KEY_COUNT
             and "Tunnel" in self.scene
             and arcade.check_for_collision_with_list(
                 self.player, self.scene["Tunnel"]
@@ -728,6 +879,7 @@ class Game(arcade.Window):
             self.player.center_x = 1700
             self.player.center_y = 350
             self.player.dash_sound = self.dash
+            
         else:
             # Reset existing player
             self.player.is_dead = False
@@ -741,9 +893,11 @@ class Game(arcade.Window):
             if level_number == 1:
                 self.player.center_x = 1700
                 self.player.center_y = 350
+                
             elif level_number == 2:
-                self.player.center_x = 220
+                self.player.center_x = 250
                 self.player.center_y = 1300
+                
             elif level_number == 3:
                 self.player.center_x = 1650
                 self.player.center_y = 2850
@@ -753,6 +907,7 @@ class Game(arcade.Window):
 
     def _setup_physics(self):
         """Set up physics engine for collision detection."""
+        
         # Combine collision layers
         collision_layers = arcade.SpriteList()
         collision_layers.extend(self.scene["Walls"])
@@ -767,6 +922,7 @@ class Game(arcade.Window):
 
     def _play_background_music(self):
         """Play background music if not already playing."""
+        
         should_play = (
             not self.background_music_player or 
             not self.background_music_player.playing
@@ -776,6 +932,7 @@ class Game(arcade.Window):
 
     def draw_health_bar(self):
         """Draw player health bar above character."""
+        
         # Calculate bar position
         bar_left = self.player.center_x - HEALTHBAR_WIDTH / 2
         bar_bottom = (
@@ -798,6 +955,7 @@ class Game(arcade.Window):
             self.player.hurt_count / 
             self.player.max_hits_before_death
         )
+        
         health_width = HEALTHBAR_WIDTH * health_percent
             
         # Draw health (green)
@@ -816,6 +974,7 @@ class Game(arcade.Window):
     
     def draw_key_count(self):
         """Draw key count UI element."""
+        
         self.key_label.text = f"Keys: {self.keys_collected}/{self.total_keys}"
         self.key_label.x = self.player.center_x
         self.key_label.y = self.player.center_y + HEALTHBAR_OFFSET_Y + 20
@@ -823,6 +982,7 @@ class Game(arcade.Window):
 
     def on_draw(self):
         """Render the game scene."""
+        
         self.clear()
         self.camera.use()
         self.scene.draw()
@@ -836,6 +996,7 @@ class Game(arcade.Window):
         Args:
             delta_time (float): Time since last update
         """
+        
         # Handle player movement input
         self._handle_player_movement()
         
@@ -864,10 +1025,12 @@ class Game(arcade.Window):
         
     def _handle_player_movement(self):
         """Process player movement based on input."""
+        
         if self.player.is_dead:
             # Disable movement when dead
             self.player.change_x = 0
             self.player.change_y = 0
+            
         elif (
             not self.player.is_dashing and 
             not self.player.is_healing and
@@ -877,58 +1040,72 @@ class Game(arcade.Window):
             self.player.change_x = 0
             self.player.change_y = 0
 
-            # Calculate speed with modifiers
+            # Change speed based on boost state
             if self.player.is_speed_boosted:
-                current_speed = 8.0
-                self.player.dash_speed = 15.0
+                current_speed = PLAYER_SPEED_BOOST
+                self.player.dash_speed = PLAYER_DASH_BOOST
+                
             else:
                 current_speed = PLAYER_SPEED
-                self.player.dash_speed = 10.0
+                self.player.dash_speed = PLAYER_SPEED_BOOST
 
             # Apply slow effect in slow zones
             if arcade.check_for_collision_with_list(
                 self.player, self.slow_list
             ):
-                current_speed *= 0.5
+                current_speed /= 2.0
 
             # Process movement keys
-            if arcade.key.W in self.held_keys or arcade.key.UP in self.held_keys:
+            if arcade.key.W in self.held_keys or arcade.key.UP \
+                in self.held_keys:
                 self.player.change_y = current_speed
-            if arcade.key.S in self.held_keys or arcade.key.DOWN in self.held_keys:
+                
+            if arcade.key.S in self.held_keys or arcade.key.DOWN \
+                in self.held_keys:
                 self.player.change_y = -current_speed
-            if arcade.key.A in self.held_keys or arcade.key.LEFT in self.held_keys:
+                
+            if arcade.key.A in self.held_keys or arcade.key.LEFT \
+                in self.held_keys:
                 self.player.change_x = -current_speed
-            if arcade.key.D in self.held_keys or arcade.key.RIGHT in self.held_keys:
+                
+            if arcade.key.D in self.held_keys or arcade.key.RIGHT \
+                in self.held_keys:
                 self.player.change_x = current_speed
 
     def _handle_key_collection(self):
         """Handle key collection mechanics."""
+        
         if not self.player.is_dead and self.keys_list:
+            
             # Check for collisions with keys
             keys_collected = arcade.check_for_collision_with_list(
                 self.player, self.keys_list
             )
                 
             for key_sprite in keys_collected:
+                
                 # Collect key
                 key_sprite.remove_from_sprite_lists()
                 self.keys_collected += 1
                 self.key_sound.play()
 
                 # Remove tunnel doors when enough keys collected
-                if self.keys_collected >= 6 and self.tunnel_door_list:
+                if self.keys_collected >= KEY_COUNT and self.tunnel_door_list:
+                    
                     for door in self.tunnel_door_list:
                         door.remove_from_sprite_lists()
                     self.tunnel_door_list = arcade.SpriteList()
 
             # Reveal tunnel when enough keys collected
-            if self.keys_collected >= 6 and "Tunnel" in self.scene:
+            if self.keys_collected >= KEY_COUNT and "Tunnel" in self.scene:
                 for tunnel in self.scene["Tunnel"]:
                     tunnel.visible = True
 
     def _handle_death(self):
         """Handle player death state."""
+        
         if self.player.is_dead and self.player.death_completed:
+            
             # Wait 1 second after death animation completes
             if time.time() - self.player.death_complete_time >= 1.0:
                 arcade.close_window()
@@ -936,20 +1113,23 @@ class Game(arcade.Window):
 
     def _handle_level_progression(self):
         """Handle level progression through tunnels."""
+        
         if (
             self.player is not None and
             not self.player.is_dead and 
-            self.keys_collected >= 6 and 
+            self.keys_collected >= KEY_COUNT and 
             "Tunnel" in self.scene and 
             arcade.check_for_collision_with_list(
                 self.player, self.scene["Tunnel"]
             )
         ):
+            
             if self.current_level < MAX_LEVEL:
                 # Advance to next level
                 self.level_complete.play()
                 self.current_level += 1
                 self.load_level(self.current_level)
+                
             else:
                 # Game completed
                 arcade.close_window()
@@ -962,15 +1142,22 @@ class Game(arcade.Window):
         Args:
             delta_time (float): Time since last update
         """
+        
         if self.player.is_dead:
             return
 
         # State durations and transitions
         durations = {
-            "wait": 4.2,     # Waiting period
-            "active": 2.0,   # Damage period
-            "cooldown": 0.2  # Recovery period
+            # Waiting period
+            "wait": 4.2,
+            
+            # Damage period
+            "active": 2.0,
+            
+            # Recovery period
+            "cooldown": 0.2
         }
+        
         next_state = {
             "wait": "active",
             "active": "cooldown",
@@ -982,24 +1169,31 @@ class Game(arcade.Window):
 
         # Process current state
         if self.peak_timer < durations[self.peak_state]:
+            
             # Damage during active phase
             if (self.peak_state == "active" and 
                 arcade.check_for_collision_with_list(
                     self.player, self.peak_list)
                 ):
+                
                 if self.player.hurt():
                     self.hurt_peak.play()
+                    
         else:
+            
             # Transition to next state
             self.peak_timer -= durations[self.peak_state]
             self.peak_state = next_state[self.peak_state]
 
             # Handle state-specific actions
             if self.peak_state == "active":
+                
                 # Activate peaks
                 for p in self.peak_list:
                     p.visible = True
                 self.peak.play()
+                
+                
             elif self.peak_state == "cooldown":
                 # Deactivate peaks
                 for p in self.peak_list:
@@ -1012,12 +1206,20 @@ class Game(arcade.Window):
         Args:
             delta_time (float): Time since last update
         """
+        
         # State durations and transitions
         durations = {
-            "short": 0.1,  # Brief damage window
-            "wait": 2.0,   # Waiting period
-            "long": 0.3    # Longer damage window
+            
+            # Brief damage window
+            "short": 0.1,
+            
+            # Waiting period
+            "wait": 2.0,
+            
+            # Longer damage window
+            "long": 0.3
         }
+        
         next_state = {
             "short": "wait",
             "wait": "long",
@@ -1029,14 +1231,18 @@ class Game(arcade.Window):
 
         # Process current state
         if self.arrow_timer < durations[self.arrow_state]:
+            
             # Damage during active phases
             if self.arrow_state in ("short", "long"):
+                
                 if arcade.check_for_collision_with_list(
                     self.player, self.arrow_list
                 ):
+                    
                     if self.player.hurt():
                         self.hurt_arrow.play()
         else:
+            
             # Transition to next state
             self.arrow_timer -= durations[self.arrow_state]
             self.arrow_state = next_state[self.arrow_state]
@@ -1052,12 +1258,19 @@ class Game(arcade.Window):
         Args:
             delta_time (float): Time since last update
         """
+        
         # State durations and transitions
         durations = {
-            "short": 0.15,  # Brief flame burst
-            "wait": 2.0,    # Waiting period
-            "long": 0.3     # Sustained flame
+            # Brief flame burst
+            "short": 0.15,
+            
+            # Waiting period
+            "wait": 2.0,
+            
+            # Sustained flame
+            "long": 0.3
         }
+        
         next_state = {
             "short": "wait",
             "wait": "long",
@@ -1069,14 +1282,21 @@ class Game(arcade.Window):
 
         # Process current state
         if self.flame_timer < durations[self.flame_state]:
+            
             # Damage during active phases
             if self.flame_state in ("short", "long"):
+                
                 if arcade.check_for_collision_with_list(
                     self.player, self.flamethrower_list
                 ):
+                    
                     if self.player.hurt():
-                        self.hurt_arrow.play()  # Reuse arrow hurt sound
+                        
+                        # Reuse arrow hurt sound
+                        self.hurt_arrow.play()
+                        
         else:
+            
             # Transition to next state
             self.flame_timer -= durations[self.flame_state]
             self.flame_state = next_state[self.flame_state]
@@ -1093,6 +1313,7 @@ class Game(arcade.Window):
             key (int): Keycode of pressed key
             modifiers (int): Modifier keys state
         """
+        
         self.held_keys.add(key)
         
         # Dash ability
@@ -1111,9 +1332,11 @@ class Game(arcade.Window):
             flasks_nearby = arcade.check_for_collision_with_list(
                 self.player, self.flask_list
             )
+            
             if flasks_nearby:
                 self.player.heal()
                 self.heal_sound.play()
+                
                 for flask in flasks_nearby:
                     flask.remove_from_sprite_lists()
 
@@ -1130,6 +1353,7 @@ class Game(arcade.Window):
                 self.player.change_x = 0
                 self.player.change_y = 0
                 self.speed_sound.play()
+                
                 for flask in speed_flasks_nearby:
                     flask.remove_from_sprite_lists()
 
@@ -1143,7 +1367,6 @@ class Game(arcade.Window):
         """
         
         self.held_keys.discard(key)
-
 
 if __name__ == "__main__":
     """Main entry point for the game."""
