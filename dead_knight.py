@@ -447,9 +447,6 @@ class Game(arcade.Window):
         # Reset keys collected when loading new level
         self.keys_collected = 0
         
-        # Stop previous background music
-        if self.background_music_player:
-            self.background_music_player.stop()
         
         # Reset all sprite lists
         self.scene = None
