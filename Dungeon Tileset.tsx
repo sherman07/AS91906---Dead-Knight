@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<tileset version="1.10" tiledversion="1.11.2" name="Dungeon Tileset" tilewidth="32" tileheight="32" tilecount="100" columns="10">
- <image source="../../Downloads/2D Pixel Dungeon Asset Pack/character and tileset/Dungeon_Tileset_320x320.png" width="320" height="320"/>
+<tileset version="1.10" tiledversion="1.11.0" name="Dungeon Tileset" tilewidth="32" tileheight="32" tilecount="100" columns="10">
+ <image source="2D Pixel Dungeon Asset Pack/character and tileset/Dungeon_Tileset.png" width="320" height="320"/>
  <tile id="0">
   <objectgroup draworder="index" id="3">
    <object id="3" x="18.4217" y="0" width="13.4429" height="31.8646"/>

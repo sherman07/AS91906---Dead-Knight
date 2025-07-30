@@ -1,18 +1,18 @@
-<?xml version='1.0' encoding='utf-8'?>
-<map version="1.10" tiledversion="1.11.2" orientation="orthogonal" renderorder="right-down" width="64" height="64" tilewidth="32" tileheight="32" infinite="0" nextlayerid="27" nextobjectid="4">
- <tileset firstgid="1" source="Dungeon.tsx" />
- <tileset firstgid="257" source="Dungeon Tileset.tsx" />
- <tileset firstgid="357" source="Torch.tsx" />
- <tileset firstgid="362" source="Side_Torch.tsx" />
- <tileset firstgid="370" source="Candlestick_01.tsx" />
- <tileset firstgid="374" source="Candlestick_02.tsx" />
- <tileset firstgid="378" source="Flags.tsx" />
- <tileset firstgid="382" source="Extre Items.tsx" />
- <tileset firstgid="412" source="peaks.tsx" />
- <tileset firstgid="416" source="Arrows.tsx" />
- <tileset firstgid="426" source="Flasks.tsx" />
- <tileset firstgid="434" source="Keys.tsx" />
- <tileset firstgid="438" source="flamethrower.tsx" />
+<?xml version="1.0" encoding="UTF-8"?>
+<map version="1.10" tiledversion="1.11.0" orientation="orthogonal" renderorder="right-down" width="64" height="64" tilewidth="32" tileheight="32" infinite="0" nextlayerid="27" nextobjectid="4">
+ <tileset firstgid="1" source="Dungeon.tsx"/>
+ <tileset firstgid="257" source="Dungeon Tileset.tsx"/>
+ <tileset firstgid="357" source="Torch.tsx"/>
+ <tileset firstgid="362" source="Side_Torch.tsx"/>
+ <tileset firstgid="370" source="Candlestick_01.tsx"/>
+ <tileset firstgid="374" source="Candlestick_02.tsx"/>
+ <tileset firstgid="378" source="Flags.tsx"/>
+ <tileset firstgid="382" source="Extre Items.tsx"/>
+ <tileset firstgid="412" source="peaks.tsx"/>
+ <tileset firstgid="416" source="Arrows.tsx"/>
+ <tileset firstgid="426" source="Flasks.tsx"/>
+ <tileset firstgid="434" source="Keys.tsx"/>
+ <tileset firstgid="438" source="flamethrower.tsx"/>
  <layer id="9" name="Background" width="64" height="64">
   <data encoding="csv">
 335,335,335,335,335,335,335,335,335,335,335,335,335,335,335,335,335,335,335,335,335,335,335,335,335,335,335,335,335,335,335,335,335,335,335,335,335,335,335,335,335,335,335,335,335,335,335,335,335,335,335,335,335,335,335,335,335,335,335,335,335,335,335,335,
