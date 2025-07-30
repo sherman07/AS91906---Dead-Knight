@@ -178,7 +178,7 @@ class PlayerCharacter(arcade.Sprite):
                 arcade.load_texture(f"{character_path}_down_hurt{i}.png"))
             
 
-        super().__init__(self.idle_textures[DIRECTION_RIGHT][0],
+        super().__init__(self.idle_textures[DIRECTION_RIGHT][0],\
                          scale=CHARACTER_SCALING)
 
     def character_animation(self, delta_time: float = 1 / 60):
@@ -194,15 +194,15 @@ class PlayerCharacter(arcade.Sprite):
             death_frames = len(self.death_textures[self.facing_direction])
             
             if elapsed < death_duration:
-                frame = min(int(elapsed / death_duration * death_frames), 
+                frame = min(int(elapsed / death_duration * death_frames), \
                             death_frames - 1)
                 
-                self.texture = self.death_textures
+                self.texture = self.death_textures\
                 [self.facing_direction][frame]
                 
             else:
                 frame = death_frames - 1
-                self.texture = self.death_textures
+                self.texture = self.death_textures\
                 [self.facing_direction][frame]
                 
                 if not self.death_completed:
@@ -220,12 +220,12 @@ class PlayerCharacter(arcade.Sprite):
                 self.is_healing = False
                 self.cur_texture = 0
             else:
-                frame = min(int(elapsed / self.heal_duration * len
+                frame = min(int(elapsed / self.heal_duration * len \
                                 (self.heal_textures[self.facing_direction])), 
                             
                            len(self.heal_textures[self.facing_direction]) - 1)
                 
-                self.texture = self.heal_textures
+                self.texture = self.heal_textures\
                 [self.facing_direction][frame]
             return
             
@@ -235,12 +235,12 @@ class PlayerCharacter(arcade.Sprite):
                 self.is_hurt = False
                 self.cur_texture = 0
             else:
-                frame = min(int(elapsed / self.hurt_duration * len
+                frame = min(int(elapsed / self.hurt_duration * len\
                                 (self.hurt_textures[self.facing_direction])), 
                             
                            len(self.hurt_textures[self.facing_direction]) - 1)
                 
-                self.texture = self.hurt_textures
+                self.texture = self.hurt_textures\
                 [self.facing_direction][frame]
                 
             return
@@ -281,7 +281,7 @@ class PlayerCharacter(arcade.Sprite):
                 frame = min(self.cur_texture // UPDATES_PER_FRAME, 
                            len(self.dash_textures[self.facing_direction]) - 1)
                 
-                self.texture = self.dash_textures
+                self.texture = self.dash_textures\
                 [self.facing_direction][frame]
                 
             return
@@ -460,9 +460,9 @@ class Game(arcade.Window):
         self.peak = arcade.Sound("music_and_sound/peak.mp3")
         self.arrow = arcade.Sound("music_and_sound/arrow.mp3")
         self.flamethrower = arcade.Sound("music_and_sound/flamethrower.mp3")
-        self.background_music = arcade.Sound
+        self.background_music = arcade.Sound\
         ("music_and_sound/background_music.mp3")
-        self.level_complete = arcade.Sound
+        self.level_complete = arcade.Sound\
         ("music_and_sound/level_complete.wav")
         self.background_music_player = None
         
@@ -542,13 +542,13 @@ class Game(arcade.Window):
         self.scene.remove_sprite_list_by_name("Walls On Top of Boundary")
 
         # Initialize other game elements
-        self.peak_list = tilemap.sprite_lists.get
+        self.peak_list = tilemap.sprite_lists.get\
         ("Peaks", arcade.SpriteList())
         
         for peak in self.peak_list:
             peak.properties = {"damage": True, "damage_amount": 1}
 
-        self.arrow_list = tilemap.sprite_lists.get
+        self.arrow_list = tilemap.sprite_lists.get\
         ("Arrow", arcade.SpriteList())
         
         for arrow in self.arrow_list:
