@@ -463,7 +463,10 @@ class Game(arcade.Window):
         self.keys_list = None
         self.tunnel_door_list = None
 
-        map_path = os.path.join(os.path.dirname(__file__), f"Level_{level_number:02d}.tmx")
+        map_path = os.path.join(
+            os.path.dirname(__file__),
+            f"Level_{level_number}.tmx"
+        )
 
         tilemap = arcade.load_tilemap(
                 map_path,
