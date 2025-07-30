@@ -650,45 +650,8 @@ class Game(arcade.Window):
         
         current_time = time.time()
 
-        # ----- PEAK DAMAGE -----
-       # ----- PEAK DAMAGE FIXED CYCLE -----
-        if not self.player.is_dead:
-            self.peak_timer += delta_time
+        self.update_peak_system(delta_time)
 
-            if self.peak_state == "wait":
-                if self.peak_timer >= 4.0:
-                    self.peak_state = "prep"
-                    self.peak_timer = 0.0
-                    for peak in self.peak_list:
-                        peak.visible = True
-                    print("PEAK → prep")
-
-            elif self.peak_state == "prep":
-                if self.peak_timer >= 0.2:
-                    self.peak_state = "active"
-                    self.peak_timer = 0.0
-                    self.peak.play()
-                    print("PEAK → active")
-
-            elif self.peak_state == "active":
-                if self.peak_timer <= 2.0:
-                    if arcade.check_for_collision_with_list(self.player, self.peak_list):
-                        if self.player.hurt():
-                            self.hurt_peak.play()
-                            self.flash_red = True
-                            self.flash_end_time = time.time() + 0.2
-                else:
-                    self.peak_state = "cooldown"
-                    self.peak_timer = 0.0
-                    for peak in self.peak_list:
-                        peak.visible = False
-                    print("PEAK → cooldown")
-
-            elif self.peak_state == "cooldown":
-                if self.peak_timer >= 0.2:
-                    self.peak_state = "wait"
-                    self.peak_timer = 0.0
-                    print("PEAK → wait")
 
                 # ----- ARROW DAMAGE -----
         if not self.player.is_dead:
@@ -704,14 +667,12 @@ class Game(arcade.Window):
                 else:
                     self.arrow_state = "wait"
                     self.arrow_timer = 0.0
-                    print("ARROW → wait")
 
             elif self.arrow_state == "wait":
                 if self.arrow_timer >= 2.0:
                     self.arrow_state = "long"
                     self.arrow_timer = 0.0
                     self.arrow.play()
-                    print("ARROW → long")
 
             elif self.arrow_state == "long":
                 if self.arrow_timer < 0.3:
@@ -723,7 +684,6 @@ class Game(arcade.Window):
                 else:
                     self.arrow_state = "short"
                     self.arrow_timer = 0.0
-                    print("ARROW → short")
 
         # ----- FLAMETHROWER DAMAGE -----
         if not self.player.is_dead:
@@ -739,14 +699,12 @@ class Game(arcade.Window):
                 else:
                     self.flame_state = "wait"
                     self.flame_timer = 0.0
-                    print("FLAME → wait")
 
             elif self.flame_state == "wait":
                 if self.flame_timer >= 2.0:
                     self.flame_state = "long"
                     self.flame_timer = 0.0
                     self.flamethrower.play()
-                    print("FLAME → long")
 
             elif self.flame_state == "long":
                 if self.flame_timer < 0.3:
@@ -758,7 +716,6 @@ class Game(arcade.Window):
                 else:
                     self.flame_state = "short"
                     self.flame_timer = 0.0
-                    print("FLAME → short")
 
 
         # ----- KEY COLLECTION SYSTEM -----
@@ -781,6 +738,51 @@ class Game(arcade.Window):
 
         # ----- CAMERA FOLLOWS PLAYER -----
         self.camera.position = self.player.position
+        
+    def update_peak_system(self, delta_time):
+        if self.player.is_dead:
+            return
+
+        # Define durations and state transitions
+        durations = {
+            "wait":     4.2,
+            "active":   2.0,
+            "cooldown": 0.2,
+        }
+        next_state = {
+            "wait":     "active",
+            "active":   "cooldown",
+            "cooldown": "wait",
+        }
+
+        # Advance timer
+        self.peak_timer += delta_time
+
+        # Still in current phase?
+        if self.peak_timer < durations[self.peak_state]:
+            # Only do damage‐checks in the active phase
+            if self.peak_state == "active" and arcade.check_for_collision_with_list(self.player, self.peak_list):
+                if self.player.hurt():
+                    self.hurt_peak.play()
+                    self.flash_red = True
+                    self.flash_end_time = time.time() + 0.2
+
+        else:
+            # Phase complete → move to next
+            self.peak_timer -= durations[self.peak_state]
+            self.peak_state = next_state[self.peak_state]
+
+            if self.peak_state == "active":
+                # Show peaks & play sound
+                for p in self.peak_list:
+                    p.visible = True
+                self.peak.play()
+
+            elif self.peak_state == "cooldown":
+                # Hide peaks
+                for p in self.peak_list:
+                    p.visible = False
+
 
     def on_key_press(self, key, modifiers):
         self.held_keys.add(key)
