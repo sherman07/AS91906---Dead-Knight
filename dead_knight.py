@@ -1,6 +1,7 @@
 import arcade
 import os
 import time
+import sys
 
 # Constants
 SCREEN_WIDTH = 1440
@@ -10,6 +11,7 @@ PLAYER_SPEED = 10
 TILE_SCALING = 1.5
 CHARACTER_SCALING = 2
 UPDATES_PER_FRAME = 5
+MAX_LEVEL = 3
 
 # Health bar constants
 HEALTHBAR_WIDTH = 100
@@ -90,17 +92,14 @@ class PlayerCharacter(arcade.Sprite):
             DIRECTION_UP: [], DIRECTION_DOWN: [], 
             DIRECTION_RIGHT: [], DIRECTION_LEFT: []
         }
-
         self.death_textures = {
             DIRECTION_UP: [], DIRECTION_DOWN: [], 
             DIRECTION_RIGHT: [], DIRECTION_LEFT: []
         }
-
         self.hurt_textures = {
             DIRECTION_UP: [], DIRECTION_DOWN: [], 
             DIRECTION_RIGHT: [], DIRECTION_LEFT: []
         }
-
         self.heal_textures = {
             DIRECTION_RIGHT: [],
             DIRECTION_LEFT: [],
@@ -350,7 +349,6 @@ class PlayerCharacter(arcade.Sprite):
         # Return False if no damage was applied
         return False
                 
-
     def die(self):
         self.is_dead = True
         self.death_start_time = time.time()
@@ -375,47 +373,38 @@ class PlayerCharacter(arcade.Sprite):
 class Game(arcade.Window):
     def __init__(self):
         super().__init__(SCREEN_WIDTH, SCREEN_HEIGHT, SCREEN_TITLE)
-        self.scene = None
-        self.player = None
-        self.camera = None
-        self.physics_engine = None
-        self.held_keys = set()
-        self.peak_list = None
-        self.last_damage_time = 0
-        self.damage_cooldown = 0.5
-        self.flash_red = False
-        self.flash_end_time = 0
-        self.flask_list = None
-        self.tunnel_door_list = None
+        arcade.set_background_color(arcade.color.BLACK)
+
+        # State
         self.current_level = 1
-
-        self.peak_damage_interval = 4
-        self.last_peak_damage_time = time.time()
-        self.peak_damage_phase = "wait"
-        self.peak_phase_start_time = time.time()
-
-        self.arrow_damage_phase = "wait"
-        self.arrow_phase_start_time = time.time()
-        self.next_arrow_phase = "long"
-
-        self.flamethrower_damage_phase = "wait"
-        self.flamethrower_phase_start_time = time.time()
-        self.next_flamethrower_phase = "short"
-
-        self.enemy_list = None
-
-        # Health bar text label
-        self.health_label = arcade.Text(
-            "", 0, 0, arcade.color.WHITE, 12,
-            anchor_x="center", anchor_y="center"
-        )
         self.keys_collected = 0
 
-        self.key_label = arcade.Text(
-            "", 0, 0, arcade.color.GOLD, 12,
-            anchor_x="center", anchor_y="center"
-        )
+        # Scene & physics
+        self.scene = None
+        self.player = None
+        self.physics_engine = None
 
+        # Cameras
+        self.camera = arcade.Camera2D()
+
+        # Input
+        self.held_keys = set()
+
+        # Sprite lists (initialized empty so collision checks never get None)
+        self.peak_list = arcade.SpriteList()
+        self.arrow_list = arcade.SpriteList()
+        self.flamethrower_list = arcade.SpriteList()
+        self.slow_list = arcade.SpriteList()
+        self.flask_list = arcade.SpriteList()
+        self.speed_flask_list = arcade.SpriteList()
+        self.keys_list = arcade.SpriteList()
+        self.tunnel_door_list = arcade.SpriteList()
+
+        # UI labels
+        self.health_label = arcade.Text("", 0, 0, arcade.color.WHITE, 12, anchor_x="center", anchor_y="center")
+        self.key_label = arcade.Text("", 0, 0, arcade.color.GOLD, 12, anchor_x="center", anchor_y="center")
+
+        # Sounds
         self.heal_sound = arcade.Sound("music_and_sound/heal.wav")
         self.key_sound = arcade.Sound("music_and_sound/key.wav")
         self.speed_sound = arcade.Sound("music_and_sound/speed.wav")
@@ -429,14 +418,15 @@ class Game(arcade.Window):
         self.background_music_player = None
         self.level_complete = arcade.Sound("music_and_sound/level_complete.wav")
         
-        self.peak_timer        = 0.0
-        self.peak_state        = "wait"     # "wait", "cooldown1", "active", "cooldown2"
+        # Timers
+        self.peak_timer = 0.0
+        self.peak_state = "wait"     # "wait", "active", "cooldown"
+        self.arrow_timer = 0.0
+        self.arrow_state = "wait"    # "short", "wait", "long"
+        self.flame_timer = 0.0
+        self.flame_state = "wait"    # "short", "wait", "long"
 
-        self.arrow_timer       = 0.0
-        self.arrow_state       = "wait"     # "short", "wait", "long"
-
-        self.flame_timer       = 0.0
-        self.flame_state       = "wait"     # "short", "wait", "long"
+        self.setup()
 
     def setup(self):
         """Set up the game and initialize the variables."""
@@ -445,21 +435,15 @@ class Game(arcade.Window):
     def load_level(self, level_number):
         """Load the specified level"""
         # Reset keys collected when loading new level
-        self.keys_collected = 0
+        self.keys_collected = 6
         
+        self.peak_timer  = 0.0
+        self.peak_state  = "wait"
+        self.arrow_timer = 0.0
+        self.arrow_state = "wait"
+        self.flame_timer = 0.0
+        self.flame_state = "wait"
         
-        # Reset all sprite lists
-        self.scene = None
-        self.foreground_layers = None
-        self.peak_list = None
-        self.arrow_list = None
-        self.flamethrower_list = None
-        self.slow_list = None
-        self.flask_list = None
-        self.speed_flask_list = None
-        self.keys_list = None
-        self.tunnel_door_list = None
-
         map_path = os.path.join(
             os.path.dirname(__file__),
             f"Level_{level_number}.tmx"
@@ -486,17 +470,20 @@ class Game(arcade.Window):
                     "Background": {},
                     "Floor": {},
                     "Tunnel": {}
-                    
-                    
                 }
             )
+        
         # Initialize the scene
         self.scene = arcade.Scene.from_tilemap(tilemap)
         
         # Store the foreground layers before removing them
-        foreground_fake_walls = self.scene["Foreground Fake Walls"]
-        walls_on_top = self.scene["Walls On Top of Boundary"]
-        
+        foreground_fake_walls = tilemap.sprite_lists.get(
+            "Foreground Fake Walls", arcade.SpriteList()
+        )
+        walls_on_top = tilemap.sprite_lists.get(
+            "Walls On Top of Boundary", arcade.SpriteList()
+        )
+
         # Create separate sprite list for foreground layers
         self.foreground_layers = arcade.SpriteList()
         self.foreground_layers.extend(foreground_fake_walls)
@@ -527,6 +514,16 @@ class Game(arcade.Window):
         self.tunnel_door_list = tilemap.sprite_lists.get("Tunnel Door", arcade.SpriteList())
         self.total_keys = len(self.keys_list)
 
+        # Hide Tunnel until 6 keys collected
+        if (self.player is not None 
+            and not self.player.is_dead 
+            and self.keys_collected >= 6 
+            and "Tunnel" in self.scene
+            and arcade.check_for_collision_with_list(self.player, self.scene["Tunnel"])):
+
+            for tunnel in self.scene["Tunnel"]:
+                tunnel.visible = False
+
         # Create player if it doesn't exist
         if not hasattr(self, 'player') or self.player is None:
             self.player = PlayerCharacter()
@@ -545,11 +542,14 @@ class Game(arcade.Window):
 
             # Set player position based on level
             if level_number == 1:
-                self.player.center_x = 350
-                self.player.center_y = 1700
+                self.player.center_x = 1700
+                self.player.center_y = 350
             elif level_number == 2:
-                self.player.center_x = 200
+                self.player.center_x = 220
                 self.player.center_y = 1300
+            elif level_number == 3:
+                self.player.center_x = 1650
+                self.player.center_y = 2850
 
         self.scene.add_sprite("Player", self.player)
         
@@ -567,7 +567,9 @@ class Game(arcade.Window):
         # Initialize camera
         self.camera = arcade.Camera2D()
 
-        self.background_music_player = self.background_music.play(loop=True)
+        # Play background music if not already playing
+        if not self.background_music_player or not self.background_music_player.playing:
+            self.background_music_player = self.background_music.play(loop=True)
 
     def draw_health_bar(self):
         bar_left = self.player.center_x - HEALTHBAR_WIDTH / 2
@@ -654,24 +656,36 @@ class Game(arcade.Window):
         self.update_arrow_system(delta_time)
         self.update_flame_system(delta_time)
 
-
         # ----- KEY COLLECTION SYSTEM -----
         if not self.player.is_dead and self.keys_list:
             keys_collected = arcade.check_for_collision_with_list(self.player, self.keys_list)
             for key_sprite in keys_collected:
                 key_sprite.remove_from_sprite_lists()
                 self.keys_collected += 1
-                self.flash_red = True
-                self.flash_end_time = current_time + 0.2
                 self.key_sound.play()
 
+                # Once you have 6 keys: hide doors, reveal tunnel
+                if self.keys_collected >= 6 and "Tunnel" in self.scene:
+                    for tunnel in self.scene["Tunnel"]:
+                        tunnel.visible = True
+
+
         # ----- TUNNEL DOOR INTERACTION -----
-        if (not self.player.is_dead and self.keys_collected >= 6 
-            and self.tunnel_door_list and len(self.tunnel_door_list) > 0):
-            door_hit = arcade.check_for_collision_with_list(self.player, self.tunnel_door_list)
-            if door_hit:
-                # Player is at the door with enough keys - ready to transition
-                pass
+        if (self.player is not None
+            and not self.player.is_dead 
+            and self.keys_collected >= 6 
+            and "Tunnel" in self.scene 
+            and arcade.check_for_collision_with_list(self.player, self.scene["Tunnel"])):
+
+            
+            if self.current_level < MAX_LEVEL:
+                self.level_complete.play()
+                self.current_level += 1
+                self.load_level(self.current_level)
+            else:
+                # Finished level 3: exit cleanly
+                arcade.close_window()
+                sys.exit()
 
         # ----- CAMERA FOLLOWS PLAYER -----
         self.camera.position = self.player.position
@@ -697,13 +711,10 @@ class Game(arcade.Window):
 
         # Still in current phase?
         if self.peak_timer < durations[self.peak_state]:
-            # Only do damage‐checks in the active phase
+            # Only do damage-checks in the active phase
             if self.peak_state == "active" and arcade.check_for_collision_with_list(self.player, self.peak_list):
                 if self.player.hurt():
                     self.hurt_peak.play()
-                    self.flash_red = True
-                    self.flash_end_time = time.time() + 0.2
-
         else:
             # Phase complete → move to next
             self.peak_timer -= durations[self.peak_state]
@@ -734,21 +745,19 @@ class Game(arcade.Window):
 
         self.arrow_timer += delta_time
 
-        # While still within this state’s duration
+        # While still within this state's duration
         if self.arrow_timer < durations[self.arrow_state]:
             if self.arrow_state in ("short", "long"):
                 if arcade.check_for_collision_with_list(self.player, self.arrow_list):
                     if self.player.hurt():
                         self.hurt_arrow.play()
-                        self.flash_red = True
-                        self.flash_end_time = time.time() + 0.2
         else:
             # Time to transition
             self.arrow_timer -= durations[self.arrow_state]
             self.arrow_state = next_state[self.arrow_state]
 
             if self.arrow_state == "long":
-                # On entering “long”, fire the arrow sound
+                # On entering "long", fire the arrow sound
                 self.arrow.play()
 
     def update_flame_system(self, delta_time):
@@ -769,18 +778,14 @@ class Game(arcade.Window):
             if self.flame_state in ("short", "long"):
                 if arcade.check_for_collision_with_list(self.player, self.flamethrower_list):
                     if self.player.hurt():
-                        self.hurt_arrow.play()  # reuse arrow‐hurt sound
-                        self.flash_red = True
-                        self.flash_end_time = time.time() + 0.2
+                        self.hurt_arrow.play()  # reuse arrow-hurt sound
         else:
             self.flame_timer -= durations[self.flame_state]
             self.flame_state = next_state[self.flame_state]
 
             if self.flame_state == "long":
-                # On entering “long”, play flamethrower sound
+                # On entering "long", play flamethrower sound
                 self.flamethrower.play()
-
-
 
     def on_key_press(self, key, modifiers):
         self.held_keys.add(key)
@@ -810,32 +815,10 @@ class Game(arcade.Window):
                     self.speed_sound.play()
                     for flask in speed_flasks_nearby:
                         flask.remove_from_sprite_lists()
-            
-            # Handle level transition when player has 6 keys and is at the door
-            if (self.keys_collected >= 6 and self.tunnel_door_list and 
-                arcade.check_for_collision_with_list(self.player, self.tunnel_door_list)):
-                
-                # Play level complete sound
-                self.level_complete.play()
-                
-                # Remove the tunnel door
-                for door in self.tunnel_door_list:
-                    door.remove_from_sprite_lists()
-                
-                # Transition to next level after a short delay
-                arcade.schedule(self.load_next_level, 1.0)  # Wait 1 second before loading next level
 
-    def load_next_level(self, delta_time: float):
-        """Load the next level"""
-        self.current_level += 1
-        self.keys_collected = 0  # Reset keys for new level
-        self.load_level(self.current_level)
-
-# ... (keep the rest of the code the same)
     def on_key_release(self, key, modifiers):
         self.held_keys.discard(key)
 
 if __name__ == "__main__":
     window = Game()
-    window.setup()
     arcade.run()
