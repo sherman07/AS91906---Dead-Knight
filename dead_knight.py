@@ -651,26 +651,25 @@ class Game(arcade.Window):
         current_time = time.time()
 
         # ----- PEAK DAMAGE -----
+       # ----- PEAK DAMAGE FIXED CYCLE -----
         if not self.player.is_dead:
             self.peak_timer += delta_time
 
-            # 1) WAIT (no damage) for 4s
             if self.peak_state == "wait":
                 if self.peak_timer >= 4.0:
                     self.peak_state = "prep"
                     self.peak_timer = 0.0
-                    # Reveal the peaks before damage window
                     for peak in self.peak_list:
                         peak.visible = True
+                    print("PEAK → prep")
 
-            # 2) PREP (no damage) for 0.2s — you could play a warning sound/animation here
             elif self.peak_state == "prep":
                 if self.peak_timer >= 0.2:
                     self.peak_state = "active"
                     self.peak_timer = 0.0
                     self.peak.play()
+                    print("PEAK → active")
 
-            # 3) ACTIVE (damage) for 2s
             elif self.peak_state == "active":
                 if self.peak_timer <= 2.0:
                     if arcade.check_for_collision_with_list(self.player, self.peak_list):
@@ -681,22 +680,22 @@ class Game(arcade.Window):
                 else:
                     self.peak_state = "cooldown"
                     self.peak_timer = 0.0
-                    # Hide after damage window
                     for peak in self.peak_list:
                         peak.visible = False
+                    print("PEAK → cooldown")
 
-            # 4) COOLDOWN (no damage) for 0.2s, then back to WAIT
             elif self.peak_state == "cooldown":
                 if self.peak_timer >= 0.2:
                     self.peak_state = "wait"
                     self.peak_timer = 0.0
+                    print("PEAK → wait")
 
-        # ----- ARROW DAMAGE -----
+                # ----- ARROW DAMAGE -----
         if not self.player.is_dead:
             self.arrow_timer += delta_time
 
             if self.arrow_state == "short":
-                if self.arrow_timer <= 0.1:
+                if self.arrow_timer < 0.1:
                     if arcade.check_for_collision_with_list(self.player, self.arrow_list):
                         if self.player.hurt():
                             self.hurt_arrow.play()
@@ -705,15 +704,17 @@ class Game(arcade.Window):
                 else:
                     self.arrow_state = "wait"
                     self.arrow_timer = 0.0
+                    print("ARROW → wait")
 
             elif self.arrow_state == "wait":
                 if self.arrow_timer >= 2.0:
                     self.arrow_state = "long"
                     self.arrow_timer = 0.0
                     self.arrow.play()
+                    print("ARROW → long")
 
             elif self.arrow_state == "long":
-                if self.arrow_timer <= 0.3:
+                if self.arrow_timer < 0.3:
                     if arcade.check_for_collision_with_list(self.player, self.arrow_list):
                         if self.player.hurt():
                             self.hurt_arrow.play()
@@ -722,30 +723,33 @@ class Game(arcade.Window):
                 else:
                     self.arrow_state = "short"
                     self.arrow_timer = 0.0
+                    print("ARROW → short")
 
         # ----- FLAMETHROWER DAMAGE -----
         if not self.player.is_dead:
             self.flame_timer += delta_time
 
             if self.flame_state == "short":
-                if self.flame_timer <= 0.15:
+                if self.flame_timer < 0.15:
                     if arcade.check_for_collision_with_list(self.player, self.flamethrower_list):
                         if self.player.hurt():
-                            self.hurt_arrow.play()    # reuse arrow hurt sound
+                            self.hurt_arrow.play()  # reused
                             self.flash_red = True
                             self.flash_end_time = time.time() + 0.2
                 else:
                     self.flame_state = "wait"
                     self.flame_timer = 0.0
+                    print("FLAME → wait")
 
             elif self.flame_state == "wait":
                 if self.flame_timer >= 2.0:
                     self.flame_state = "long"
                     self.flame_timer = 0.0
                     self.flamethrower.play()
+                    print("FLAME → long")
 
             elif self.flame_state == "long":
-                if self.flame_timer <= 0.3:
+                if self.flame_timer < 0.3:
                     if arcade.check_for_collision_with_list(self.player, self.flamethrower_list):
                         if self.player.hurt():
                             self.hurt_arrow.play()
@@ -754,6 +758,8 @@ class Game(arcade.Window):
                 else:
                     self.flame_state = "short"
                     self.flame_timer = 0.0
+                    print("FLAME → short")
+
 
         # ----- KEY COLLECTION SYSTEM -----
         if not self.player.is_dead and self.keys_list:
