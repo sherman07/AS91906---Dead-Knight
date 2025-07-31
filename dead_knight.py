@@ -292,7 +292,9 @@ class PlayerCharacter(arcade.Sprite):
             return
 
         frames = self.heal_textures[self.facing_direction]
-        idx = min(int(elapsed / self.drink_duration * len(frames)), len(frames) - 1)
+        idx = min(int(elapsed / self.drink_duration * len(frames)), \
+            len(frames) - 1)
+        
         self.texture = frames[idx]
         
     def _handle_death_animation(self):
@@ -328,13 +330,15 @@ class PlayerCharacter(arcade.Sprite):
             )
             
             # Set texture to current death animation frame
-            self.texture = self.death_textures[self.facing_direction][frame]
+            self.texture = self.death_textures[self.facing_direction]\
+                [frame]
             
         else:
             
             # Animation complete - show final frame
             frame = death_frames - 1
-            self.texture = self.death_textures[self.facing_direction][frame]
+            self.texture = self.death_textures[self.facing_direction]\
+                [frame]
             
             # Mark death as completed if not already done
             if not self.death_completed:
@@ -977,7 +981,8 @@ class Game(arcade.Window):
             not self.background_music_player.playing
         )
         if should_play:
-            self.background_music_player = self.background_music.play(loop=True)
+            self.background_music_player = self.background_music.play\
+                (loop=True)
 
     def draw_health_bar(self):
         """Draw player health bar above character."""
