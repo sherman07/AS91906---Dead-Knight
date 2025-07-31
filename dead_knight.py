@@ -29,6 +29,9 @@ DIRECTION_DOWN = 1
 DIRECTION_LEFT = 2
 DIRECTION_RIGHT = 3
 
+# Character frame constants
+HEAL_FRAMES = 12
+IDLE_WALK_RUN_DEATH_FRAMES = 7
 
 class PlayerCharacter(arcade.Sprite):
     """
@@ -133,7 +136,7 @@ class PlayerCharacter(arcade.Sprite):
         }
 
         # Load healing textures (12 frames)
-        for i in range(12):
+        for i in range(HEAL_FRAMES):
             self.heal_textures[DIRECTION_RIGHT].append(
                 arcade.load_texture(f"{character_path}_right_heal{i}.png")
             )
@@ -148,7 +151,7 @@ class PlayerCharacter(arcade.Sprite):
             )
 
         # Load 7 frame animations (idle, walk, dash, death)
-        for i in range(7):
+        for i in range(IDLE_WALK_RUN_DEATH_FRAMES):
             
             # Idle animations
             self.idle_textures[DIRECTION_RIGHT].append(
