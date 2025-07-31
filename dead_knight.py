@@ -89,6 +89,11 @@ class PlayerCharacter(arcade.Sprite):
         self.speed_boost_duration = 4.0
         self.speed_multiplier = 1.5
         
+        # Flask properties
+        self.is_drinking = False
+        self.drink_start_time = 0
+        self.drink_duration = 0.5
+        
         # Death state
         self.death_completed = False
         self.death_complete_time = 0
@@ -265,6 +270,30 @@ class PlayerCharacter(arcade.Sprite):
 
         # Handle regular movement animations
         self._handle_standard_animation()
+        
+    def _handle_drink_animation(self):
+        """
+        Play the speed-flask drinking animation to completion.
+
+        While drinking:
+        - Blocks all other animations and inputs
+        - Uses the same frame sequence as healing for consistency
+
+        State transition:
+        - When elapsed >= drink_duration, clear is_drinking and reset 
+        texture
+        """
+        
+        elapsed = time.time() - self.drink_start_time
+        
+        if elapsed >= self.drink_duration:
+            self.is_drinking = False
+            self.cur_texture = 0
+            return
+
+        frames = self.heal_textures[self.facing_direction]
+        idx = min(int(elapsed / self.drink_duration * len(frames)), len(frames) - 1)
+        self.texture = frames[idx]
         
     def _handle_death_animation(self):
         """
@@ -494,23 +523,36 @@ class PlayerCharacter(arcade.Sprite):
     
     def heal(self):
         """
-        Initiate healing process if possible.
-        
-        Conditions:
-        - Player not dead
-        - Not currently in special state (dash/hurt/heal)
-        - Heal cooldown expired
+        Start the healing animation and apply health restoration.
+
+        Conditions for starting:
+        - Player is alive (not self.is_dead)
+        - Not currently in hurt, dash, another heal, or drinking state
         """
         
-        if (not self.is_dead and not self.is_healing 
-            and not self.is_hurt and not self.is_dashing 
-            and self.heal_cooldown <= 0):
+        # Only allow healing when fully idle
+        if not (self.is_dead or self.is_hurt or self.is_dashing
+                or self.is_healing or self.is_drinking):
             
             self.is_healing = True
             self.heal_start_time = time.time()
             self.hurt_count = max(0, self.hurt_count - self.heal_amount)
-            self.change_x = 0
-            self.change_y = 0
+
+    def drink_speed(self):
+        """
+        Start the speed-flask drinking animation and grant speed boost.
+
+        Conditions for starting:
+        - Player is alive
+        - Not currently in hurt, dash, healing, or another drinking state
+        """
+        
+        if not (self.is_dead or self.is_hurt or self.is_dashing
+                or self.is_healing or self.is_drinking):
+            
+            self.is_drinking = True
+            self.drink_start_time = time.time()
+            self.apply_speed_boost()
 
     def dash(self):
         """
@@ -567,6 +609,10 @@ class PlayerCharacter(arcade.Sprite):
         
         current_time = time.time()
         invincible_period = current_time - self.last_hurt_time <= self.invincibility_duration
+        
+        if self.is_hurt:
+            self.is_healing = False
+            self.is_drinking = False
         
         if (not self.is_dead and not self.is_hurt 
             and not self.is_dashing and not self.is_healing 
@@ -1074,6 +1120,12 @@ class Game(arcade.Window):
             if arcade.key.D in self.held_keys or arcade.key.RIGHT \
                 in self.held_keys:
                 self.player.change_x = current_speed
+                
+        elif (self.player.is_hurt
+              or self.player.is_healing
+              or self.player.is_drinking):
+            self.player.change_x = 0
+            self.player.change_y = 0
 
     def _handle_key_collection(self):
         """Handle key collection mechanics."""
@@ -1086,7 +1138,7 @@ class Game(arcade.Window):
             )
                 
             for key_sprite in keys_collected:
-                
+            
                 # Collect key
                 key_sprite.remove_from_sprite_lists()
                 self.keys_collected += 1
