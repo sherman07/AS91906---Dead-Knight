@@ -548,7 +548,8 @@ class PlayerCharacter(arcade.Sprite):
 
         Conditions for starting:
         - Player is alive
-        - Not currently in hurt, dash, healing, or another drinking state
+        - Not currently in hurt, dash, healing, or another drinking 
+        state
         """
         
         if not (self.is_dead or self.is_hurt or self.is_dashing
@@ -612,7 +613,8 @@ class PlayerCharacter(arcade.Sprite):
         """
         
         current_time = time.time()
-        invincible_period = current_time - self.last_hurt_time <= self.invincibility_duration
+        invincible_period = current_time - self.last_hurt_time <= \
+            self.invincibility_duration
         
         if self.is_hurt:
             self.is_healing = False
@@ -739,11 +741,11 @@ class Game(arcade.Window):
 
         # Trap system timers
         self.peak_timer = 0.0
-        self.peak_state = "wait"  # States: "wait", "active", "cooldown"
+        self.peak_state = "wait" # States: "wait", "active", "cooldown"
         self.arrow_timer = 0.0
-        self.arrow_state = "wait"  # States: "short", "wait", "long"
+        self.arrow_state = "wait" # States: "short", "wait", "long"
         self.flame_timer = 0.0
-        self.flame_state = "wait"  # States: "short", "wait", "long"
+        self.flame_state = "wait" # States: "short", "wait", "long"
 
         # Initialize game
         self.setup()
